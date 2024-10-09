@@ -1,0 +1,5 @@
+name: bag
+batch_size: 1
+num_workers: 4
+path: data/shapenet/bag
+type: shapenet
