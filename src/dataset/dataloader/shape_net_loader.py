@@ -25,6 +25,13 @@ class PLYPointCloudDataset(Dataset):
     def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
         # 加载第 idx 个样本
         file_path = self.file_list[idx]
+
+        file_dir = file_path.parent
+
+        uuid = file_path.stem
+
+        triplane_feature = torch.load(file_dir / f"{uuid}.pt")
+
         plydata = PlyData.read(file_path)
         max_sh_degree = 3
 
@@ -66,6 +73,8 @@ class PLYPointCloudDataset(Dataset):
             'opacity': torch.tensor(opacities, dtype=torch.float).to('cuda'),
             'scale': torch.tensor(scales, dtype=torch.float).to('cuda'),
             'rot': torch.tensor(rots, dtype=torch.float).to('cuda'),
+            'name': file_path.stem,
+            'features': triplane_feature
         }
 
         if self.transform:
@@ -92,6 +101,8 @@ def custom_collate_fn(batch):
         'opacity': [sample['opacity'] for sample in batch],
         'scale': [sample['scale'] for sample in batch],
         'rot': [sample['rot'] for sample in batch],
+        'name': [sample['name'] for sample in batch],
+        'features': [sample['features'] for sample in batch]
     }
 
 def get_test_data():
@@ -105,6 +116,16 @@ def get_test_data():
     # 迭代数据
     for batch in data_loader:
         return batch
+
+def get_test_data_loader():
+    # 创建数据集
+    directory_path = Path(__file__).parent.parent / 'data' / 'bag'
+    dataset = PLYPointCloudDataset(directory=str(directory_path.absolute()))
+
+    # 使用 DataLoader 加载数据
+    data_loader = DataLoader(dataset=dataset, batch_size=1, shuffle=False, collate_fn=custom_collate_fn)
+
+    return data_loader
 
 if __name__ == '__main__':
     # 创建数据集

@@ -52,7 +52,7 @@ def train(config):
             else "auto"
         ),
         callbacks=custom_callbacks,
-        val_check_interval=config.trainer.val_check_interval,
+        # val_check_interval=config.trainer.val_check_interval,
         enable_progress_bar=False,
         gradient_clip_val=config.trainer.gradient_clip_val,
         max_steps=config.trainer.max_steps,
@@ -60,13 +60,13 @@ def train(config):
     )
 
     torch.manual_seed(config.seed + trainer.global_rank)
+    torch.multiprocessing.set_start_method('spawn')
 
     data_module = DataModule(config.dataset)
 
     model_wrapper = ModelWrapper(
         config
     )
-
 
     if config.mode == "train":
         trainer.fit(model_wrapper, data_module, ckpt_path=checkpoint_path)

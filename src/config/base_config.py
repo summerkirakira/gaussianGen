@@ -35,7 +35,7 @@ class BaseConfig(BaseModel):
         load: Optional[str] = None
 
     class Trainer(BaseModel):
-        val_check_interval: int = 5000
+        val_check_interval: int = 0
         max_steps: int = 300000
         gradient_clip_val: Optional[float] = None
 
