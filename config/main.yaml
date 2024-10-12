@@ -4,8 +4,8 @@ defaults:
 wandb:
     project: gaussian_gen
     entity: summerkirakira
-    name: Bag
-    version: 0.0.1
+    name: Bag Test
+    version: 0.0.4
     disabled: false
 
 checkpointing:

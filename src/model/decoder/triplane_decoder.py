@@ -42,7 +42,15 @@ class TriplaneDecoder(nn.Module):
             nn.Linear(feature_dim + 3, feature_dim),
             nn.ReLU(True),
             nn.Linear(feature_dim, 3 * self.n_offsets),
-        )
+            nn.Sigmoid()
+        ).cuda()
+
+        self.mlp_appearance = nn.Sequential(
+            nn.Linear(feature_dim + 3, feature_dim),
+            nn.ReLU(True),
+            nn.Linear(feature_dim, 1),
+            nn.Sigmoid()
+        ).cuda()
 
     @staticmethod
     def scaling_activation(x):
@@ -61,16 +69,34 @@ class TriplaneDecoder(nn.Module):
 
         voxel_nums = self.voxel_num ** 3
 
-        voxel_features = sample_from_triplane(viewpoint_camera, triplane_code)
+        voxel_features = sample_from_triplane(triplane_code, self.voxel_num)
         voxel_features = voxel_features.reshape(-1, self.voxel_num * self.voxel_num * self.voxel_num).transpose(0, 1)
         voxel_positions = generate_grid(self.voxel_num).reshape(self.voxel_num ** 3, 3)
-        w2c = np.linalg.inv(viewpoint_camera.world_view_transform)
+        w2c = np.linalg.inv(viewpoint_camera.world_view_transform.transpose(0, 1).cpu().numpy())
         viewpoint_position = w2c[:3, 3]
         viewpoint_position = Tensor(viewpoint_position).cuda().unsqueeze(0).expand(voxel_positions.shape[0], -1)
         voxel_positions = voxel_positions.cuda()
         relative_positions = voxel_positions - viewpoint_position
 
         voxel_features = torch.cat([voxel_features, relative_positions], dim=1)
+
+        voxel_appearance = self.mlp_appearance(voxel_features).reshape(voxel_nums, 1)
+
+        view_mask = voxel_appearance > 0.5
+        if torch.all(~view_mask):
+            raise ValueError("No voxel is visible")
+
+        if view_mask.sum() > 25000:
+            topk_apperance, topk_indices = torch.topk(voxel_appearance.squeeze(), 25000)
+            voxel_features = voxel_features[topk_indices]
+            voxel_positions = voxel_positions[topk_indices]
+            voxel_positions = voxel_positions.repeat_interleave(self.n_offsets, dim=0)
+        else:
+            voxel_features = voxel_features[view_mask.squeeze()]
+            voxel_positions = voxel_positions[view_mask.squeeze()]
+            voxel_positions = voxel_positions.repeat_interleave(self.n_offsets, dim=0)
+
+        voxel_nums = voxel_features.shape[0]
         opacity = self.mlp_opacity(voxel_features).reshape(voxel_nums * self.n_offsets, 1)
         color = self.mlp_color(voxel_features).reshape(voxel_nums * self.n_offsets, 3)
         scaling_rot = self.mlp_cov(voxel_features).reshape(voxel_nums * self.n_offsets, 7)

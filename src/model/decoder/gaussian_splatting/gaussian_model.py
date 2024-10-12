@@ -47,8 +47,9 @@ class MiniGaussian:
 
     def load_data(self, f_dc, f_rest, opacity, scaling, rotation, xyz):
         self._xyz = xyz.contiguous()
-        self._features_dc = f_dc.contiguous()
-        self._features_rest = f_rest.contiguous()
+        if f_dc is not None:
+            self._features_dc = f_dc.contiguous()
+            self._features_rest = f_rest.contiguous()
         self._opacity = opacity.contiguous()
         self._scaling = scaling.contiguous()
         self._rotation = rotation.contiguous()

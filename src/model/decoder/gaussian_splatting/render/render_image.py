@@ -26,7 +26,8 @@ def render_gs_cuda(
         opacity: Tensor,
         scaling: Tensor,
         rotation: Tensor,
-        c2w: Optional[Tensor] = None,
+        camera: Optional[MiniCam] = None,
+        color_precomp: Optional[Tensor] = None
 ) -> GaussianRenderResult:
     gaussian_model = MiniGaussian()
     gaussian_model.load_data(
@@ -39,12 +40,12 @@ def render_gs_cuda(
     )
 
     bg_color = torch.Tensor([0., 0., 0.]).cuda()
-    if c2w is not None:
-        viewpoint_camera = MiniCam(c2w)
+    if camera is not None:
+        viewpoint_camera = camera
     else:
         viewpoint_camera = MiniCam.get_random_cam()
 
-    return _render(viewpoint_camera=viewpoint_camera, pc=gaussian_model, bg_color=bg_color)
+    return _render(viewpoint_camera=viewpoint_camera, pc=gaussian_model, bg_color=bg_color, override_color=color_precomp)
 
 
 def _render(viewpoint_camera, pc, bg_color: torch.Tensor, scaling_modifier=1.0,

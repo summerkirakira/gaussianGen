@@ -128,7 +128,7 @@ class MiniCam:
         phi = np.random.uniform(0, np.pi)
         camera_pos = spherical_to_cartesian(3, theta, phi)
         # camera_pos = np.array([0, 0, 6])
-        print(f"Camera position: {camera_pos}")
+        # print(f"Camera position: {camera_pos}")
         view_matrix = create_view_matrix(camera_pos)
 
         view_matrix = torch.tensor(view_matrix, dtype=torch.float32).transpose(0, 1).cuda()

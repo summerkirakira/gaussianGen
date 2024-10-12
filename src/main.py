@@ -57,6 +57,7 @@ def train(config):
         gradient_clip_val=config.trainer.gradient_clip_val,
         max_steps=config.trainer.max_steps,
         plugins=[SLURMEnvironment(auto_requeue=False)],
+        log_every_n_steps=1,
     )
 
     torch.manual_seed(config.seed + trainer.global_rank)
