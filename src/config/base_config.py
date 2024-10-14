@@ -1,16 +1,8 @@
 from omegaconf import OmegaConf
 from pydantic import BaseModel
 from typing import Optional, Literal
-
-
-# def modify_config(cfg: dict):
-#     datasets = []
-#     cfg_dict = OmegaConf.to_container(cfg, resolve=True)
-#     for name, config in cfg_dict['dataset'].items():
-#         config["name"] = name
-#         datasets.append(config)
-#     cfg['dataset'] = datasets
-#     return cfg
+from .diffusion import DiffusionConfig
+from .unet import UnetConfig
 
 
 class BaseConfig(BaseModel):
@@ -39,11 +31,16 @@ class BaseConfig(BaseModel):
         max_steps: int = 300000
         gradient_clip_val: Optional[float] = None
 
+    class Model(BaseModel):
+        diffusion: DiffusionConfig
+        unet: UnetConfig
+
     dataset: Dataset
     wandb: Wandb
     output_path: str
     checkpointing: Checkpointing
     trainer: Trainer = Trainer()
+    model: Model
 
     seed: int = 114514
     mode: Literal["train", "test"] = "train"

@@ -1,7 +1,6 @@
 import torch.optim
 from lightning.pytorch import LightningModule
 from lightning.pytorch.loggers.wandb import WandbLogger
-from .diffusions.temp_config import diffusion_cfg
 from .diffusions import GaussianDiffusion
 from mmgen.models import build_module
 
@@ -14,11 +13,10 @@ from .decoder.gaussian_splatting.render import render_gs_cuda
 from src.model.losses import l1_loss, lpips_loss, ssim
 import wandb
 from torch import Tensor
-
-
-def code_diff_reshape(code):
-    code_diff = code.reshape(1, 18, 128, 128)
-    return code_diff
+from .scripts.diffusion_setup import create_gaussian_diffusion
+from src.misc import distribute as dist
+from .diffusions.unet import UNetModel
+from .diffusions.resample import UniformSampler
 
 
 class ModelWrapper(LightningModule):
@@ -28,8 +26,20 @@ class ModelWrapper(LightningModule):
 
     def __init__(self, cfg: BaseConfig):
         super().__init__()
-        self.diffusion_model: GaussianDiffusion = build_module(diffusion_cfg)
-        self.decoder: TriplaneDecoder = TriplaneDecoder()
+
+        dist.setup_dist()
+        torch.cuda.set_device(dist.dev())
+
+        self.diffusion_model: GaussianDiffusion = create_gaussian_diffusion(**cfg.model.diffusion.model_dump())
+
+        unet = UNetModel(**cfg.model.unet.model_dump())
+        unet = unet.to(dist.dev())
+
+        print("num of params: {} M".format(sum(p.numel() for p in unet.parameters() if p.requires_grad) / 1e6))
+
+        schedule_sampler = UniformSampler(cfg.model.diffusion.steps)
+
+        # self.decoder: TriplaneDecoder = TriplaneDecoder()
         self.cfg = cfg
         self.automatic_optimization = False
 
