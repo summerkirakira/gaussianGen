@@ -27,7 +27,7 @@ def train(config):
         logger = WandbLogger(
             project=config.wandb.project,
             name=f"{config.wandb.name}",
-            version=config.wandb.version,
+            # version=config.wandb.version,
             config=config.model_dump()
         )
     else:

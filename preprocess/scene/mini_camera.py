@@ -1,10 +1,7 @@
 import torch
 import numpy as np
 import math
-import random
-
-from torch.optim.radam import radam
-
+from .render import render_gs_cuda
 
 def spherical_to_cartesian(r, theta, phi):
     x = r * np.sin(phi) * np.cos(theta)
@@ -124,7 +121,7 @@ class MiniCam:
     def get_random_cam():
         theta = np.random.uniform(0, 2 * np.pi)
         phi = np.random.uniform(0, np.pi)
-        camera_pos = spherical_to_cartesian(3, theta, phi)
+        camera_pos = spherical_to_cartesian(2, theta, phi)
         # camera_pos = np.array([0, 0, 6])
         # print(f"Camera position: {camera_pos}")
         view_matrix = create_view_matrix(camera_pos)
@@ -142,3 +139,16 @@ class MiniCam:
         ).cuda()
 
         return MiniCam(test_world_view_transform)
+
+    def render(self, gs_model):
+        return render_gs_cuda(
+            gs_model.xyz,
+            gs_model.f_dc,
+            gs_model.f_rest,
+            gs_model.opacity,
+            gs_model.scale,
+            gs_model.rot,
+            self
+        )
+
+

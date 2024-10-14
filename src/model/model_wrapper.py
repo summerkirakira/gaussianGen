@@ -1,7 +1,6 @@
 import torch.optim
 from lightning.pytorch import LightningModule
 from lightning.pytorch.loggers.wandb import WandbLogger
-from lightning.pytorch.utilities.types import STEP_OUTPUT, OptimizerLRScheduler
 from .diffusions.temp_config import diffusion_cfg
 from .diffusions import GaussianDiffusion
 from mmgen.models import build_module
@@ -64,12 +63,13 @@ class ModelWrapper(LightningModule):
         self.log(f"decoder_l1_loss", ll1)
         lssim = ssim(gt_image, pred_image)
         self.log(f"decoder_ssim_loss", lssim)
-        decoder_loss = (1.0 - 0.2) * ll1 + 0.2 * (1.0 - lssim)
+        decoder_loss = (1.0 - 0.1) * ll1 + 0.1 * (1.0 - lssim)
         decoder_loss.backward()
         decoder_optimizer.step()
 
         if self.global_step % 500 == 0:
             self.log_image(pred_image, gt_image)
+        print("Global Step: ", self.global_step)
 
     def record_diffusion_logs(self, log_vars: Dict[str, Any]):
         self.log("loss_ddpm_mse", log_vars["loss_ddpm_mse"])
