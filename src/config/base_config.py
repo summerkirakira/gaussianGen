@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from typing import Optional, Literal
 from .diffusion import DiffusionConfig
 from .unet import UnetConfig
+from .neural_gs import NeuralGaussianConfig
 
 
 class BaseConfig(BaseModel):
@@ -34,6 +35,7 @@ class BaseConfig(BaseModel):
     class Model(BaseModel):
         diffusion: DiffusionConfig
         unet: UnetConfig
+        neural_gs: NeuralGaussianConfig
 
     dataset: Dataset
     wandb: Wandb

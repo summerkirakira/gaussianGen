@@ -6,7 +6,7 @@ import io
 import os
 import socket
 
-from mpi4py import MPI
+# from mpi4py import MPI
 import torch as th
 import torch.distributed as dist
 # Change this to reflect your cluster layout.

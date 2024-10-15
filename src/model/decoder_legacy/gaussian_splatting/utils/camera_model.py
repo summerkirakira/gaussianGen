@@ -122,7 +122,7 @@ class MiniCam:
 
     @staticmethod
     def get_random_cam():
-        theta = np.random.uniform(0, 2 * np.pi)
+        theta = np.random.uniform(0, 1.5 * np.pi)
         phi = np.random.uniform(0, np.pi)
         camera_pos = spherical_to_cartesian(3, theta, phi)
         # camera_pos = np.array([0, 0, 6])

@@ -26,3 +26,4 @@ class UnetConfig(BaseModel):
 
     class Config:
         extra = "forbid"
+        protected_namespaces = ()

@@ -1,5 +1,5 @@
 from lightning.pytorch import LightningModule
-from typing import Optional
+from typing import Optional, Tuple
 from pathlib import Path
 from src.misc.general_utils import strip_symmetric, build_scaling_rotation,  inverse_sigmoid
 import torch
@@ -44,6 +44,7 @@ class NeuralGaussianDecoder(LightningModule):
 
         self.setup_functions()
         self.setup_mlp()
+        self.initial_voxel_grid()
 
     def setup_mlp(self):
         self.mlp_opacity = nn.Sequential(
@@ -60,7 +61,7 @@ class NeuralGaussianDecoder(LightningModule):
         ).cuda()
 
         self.mlp_offsets = nn.Sequential(
-            nn.Linear(self.feat_dim + 3 + self.cov_dist_dim, self.feat_dim),
+            nn.Linear(self.feat_dim + 3, self.feat_dim),
             nn.ReLU(True),
             nn.Linear(self.feat_dim, 3 * self.n_offsets),
             nn.Tanh()
@@ -100,8 +101,17 @@ class NeuralGaussianDecoder(LightningModule):
         }
         torch.save(model_dict, path)
 
+    def load_model_legacy(self, path: Path):
+        self.mlp_cov.load_state_dict(torch.load(path / 'mlp_cov.pth', weights_only=True))
+        self.mlp_opacity.load_state_dict(torch.load(path / 'mlp_opacity.pth', weights_only=True))
+        self.mlp_color.load_state_dict(torch.load(path / 'mlp_color.pth', weights_only=True))
+        # self.mlp_scaling.load_state_dict(torch.load(path / 'mlp_scaling.pth'))
+        self.mlp_offsets.load_state_dict(torch.load(path / 'mlp_offsets.pth', weights_only=True))
+
     def load_model(self, path: Path):
-        loaded_dict = torch.load(path)
+        if path.is_dir():
+            return self.load_model_legacy(path)
+        loaded_dict = torch.load(path, weights_only=True)
         self.mlp_cov.load_state_dict(loaded_dict['mlp_cov'])
         self.mlp_opacity.load_state_dict(loaded_dict['mlp_opacity'])
         self.mlp_offsets.load_state_dict(loaded_dict['mlp_offsets'])
@@ -111,7 +121,7 @@ class NeuralGaussianDecoder(LightningModule):
         torch.save(self._anchor_feat, path)
 
     def load_features(self, path: Path):
-        self._anchor_feat = torch.load(path)
+        self._anchor_feat = torch.load(path, weights_only=True)
 
     def freeze(self):
         self.mlp_cov.eval()
@@ -169,16 +179,16 @@ class NeuralGaussianDecoder(LightningModule):
         self._scaling = nn.Parameter(scales.requires_grad_(False))
         self._rotation = nn.Parameter(rots.requires_grad_(False))
         self._opacity = nn.Parameter(opacities.requires_grad_(False))
-        self.max_radii2D = torch.zeros((self.get_anchor.shape[0]), device="cuda").requires_grad_(False)
+        self.max_radii2D = torch.zeros((self._anchor.shape[0]), device="cuda").requires_grad_(False)
 
-    def render(self, viewpoint_camera, features=None):
+    def render(self, viewpoint_camera, features=None) -> Tuple[torch.Tensor, torch.Tensor]:
         if features is not None:
             self._anchor_feat = features
             self._anchor_feat.requires_grad_(True)
 
         feat = self._anchor_feat
         anchor = self._anchor
-        grid_scaling = self._scaling
+        grid_scaling = self.scaling_activation(self._scaling)
 
         ob_view = anchor - viewpoint_camera.camera_center
         ob_dist = ob_view.norm(dim=1, keepdim=True)
