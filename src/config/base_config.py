@@ -33,16 +33,16 @@ class BaseConfig(BaseModel):
         gradient_clip_val: Optional[float] = None
 
     class Model(BaseModel):
-        diffusion: DiffusionConfig
-        unet: UnetConfig
-        neural_gs: NeuralGaussianConfig
+        diffusion: DiffusionConfig = DiffusionConfig()
+        unet: UnetConfig = UnetConfig()
+        neural_gs: NeuralGaussianConfig = NeuralGaussianConfig()
 
     dataset: Dataset
     wandb: Wandb
     output_path: str
     checkpointing: Checkpointing
     trainer: Trainer = Trainer()
-    model: Model
+    model: Model = Model()
 
     seed: int = 114514
     mode: Literal["train", "test"] = "train"

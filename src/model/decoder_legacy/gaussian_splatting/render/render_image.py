@@ -12,7 +12,7 @@
 import torch
 import math
 from diff_gaussian_rasterization import GaussianRasterizationSettings, GaussianRasterizer
-from src.model.decoder.gaussian_splatting.gaussian_model import MiniGaussian
+from src.model.decoder_legacy.gaussian_splatting.gaussian_model import MiniGaussian
 from torch import Tensor
 from typing import Optional
 from ..utils.camera_model import MiniCam
@@ -26,9 +26,9 @@ def render_gs_cuda(
         opacity: Tensor,
         scaling: Tensor,
         rotation: Tensor,
-        camera: Optional[MiniCam] = None,
+        camera = None,
         color_precomp: Optional[Tensor] = None
-) -> GaussianRenderResult:
+):
     gaussian_model = MiniGaussian()
     gaussian_model.load_data(
         feature_dc,
@@ -40,16 +40,12 @@ def render_gs_cuda(
     )
 
     bg_color = torch.Tensor([0., 0., 0.]).cuda()
-    if camera is not None:
-        viewpoint_camera = camera
-    else:
-        viewpoint_camera = MiniCam.get_random_cam()
 
-    return _render(viewpoint_camera=viewpoint_camera, pc=gaussian_model, bg_color=bg_color, override_color=color_precomp)
+    return _render(viewpoint_camera=camera, pc=gaussian_model, bg_color=bg_color, override_color=color_precomp)
 
 
 def _render(viewpoint_camera, pc, bg_color: torch.Tensor, scaling_modifier=1.0,
-            override_color=None) -> GaussianRenderResult:
+            override_color=None):
     """
     Render the scene.
 
@@ -118,6 +114,7 @@ def _render(viewpoint_camera, pc, bg_color: torch.Tensor, scaling_modifier=1.0,
     # Those Gaussians that were frustum culled or had a radius of 0 were not visible.
     # They will be excluded from value updates used in the splitting criteria.
 
+    # return rendered_image
     return GaussianRenderResult(
         render=rendered_image,
         viewspace_points=screenspace_points,

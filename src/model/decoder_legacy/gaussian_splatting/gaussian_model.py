@@ -31,8 +31,7 @@ class MiniGaussian:
 
     @property
     def get_scaling(self):
-        # scales = torch.exp(self._scaling)
-        scales = self._scaling
+        scales = torch.exp(self._scaling)
         return scales
 
     @property

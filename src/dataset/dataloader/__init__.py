@@ -1,1 +1,1 @@
-from .shape_net_loader import PLYPointCloudDataset
+from .shape_net_loader import PLYPointCloudDataset, custom_collate_fn

@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Optional, Callable, Dict, Any
 import numpy as np
 from plyfile import PlyData, PlyElement
+from src.types import TrainDataGaussianType
 
 class PLYPointCloudDataset(Dataset):
     def __init__(self, directory: str, transform: Optional[Callable[[Dict[str, Any]], Dict[str, Any]]] = None) -> None:
@@ -30,7 +31,7 @@ class PLYPointCloudDataset(Dataset):
 
         uuid = file_path.stem
 
-        triplane_feature = torch.load(file_dir / f"{uuid}.pt")
+        # triplane_feature = torch.load(file_dir / f"{uuid}.pt")
 
         plydata = PlyData.read(file_path)
         max_sh_degree = 3
@@ -74,7 +75,7 @@ class PLYPointCloudDataset(Dataset):
             'scale': torch.tensor(scales, dtype=torch.float).to('cuda'),
             'rot': torch.tensor(rots, dtype=torch.float).to('cuda'),
             'name': file_path.stem,
-            'features': triplane_feature
+            # 'features': triplane_feature
         }
 
         if self.transform:
@@ -83,7 +84,7 @@ class PLYPointCloudDataset(Dataset):
         return sample
 
 
-def custom_collate_fn(batch):
+def custom_collate_fn(batch) -> TrainDataGaussianType:
     """
     自定义的 batch 数据处理函数。
 
@@ -94,7 +95,7 @@ def custom_collate_fn(batch):
     - 一个字典，包含处理后的 batch 数据。
     """
 
-    return {
+    gaussian_model = {
         'xyz': [sample['xyz'] for sample in batch],
         'f_dc': [sample['f_dc'] for sample in batch],
         'f_rest': [sample['f_rest'] for sample in batch],
@@ -102,8 +103,15 @@ def custom_collate_fn(batch):
         'scale': [sample['scale'] for sample in batch],
         'rot': [sample['rot'] for sample in batch],
         'name': [sample['name'] for sample in batch],
-        'features': [sample['features'] for sample in batch]
     }
+
+    data = {
+        'gaussian_model': gaussian_model,
+        # 'labels': [None for _ in batch],
+        # 'features': [sample['features'] for sample in batch]
+    }
+
+    return TrainDataGaussianType(**data)
 
 def get_test_data():
     # 创建数据集

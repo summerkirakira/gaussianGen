@@ -44,6 +44,9 @@ def dev():
     """
     Get the device to use for torch.distributed.
     """
+
+    return 'cuda:0'
+
     if th.cuda.is_available():
         return th.device(f"cuda:{dist.get_rank() % GPUS_PER_NODE}")
     return th.device("cpu")

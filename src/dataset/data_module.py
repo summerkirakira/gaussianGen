@@ -1,4 +1,4 @@
-from .dataloader import PLYPointCloudDataset
+from .dataloader import PLYPointCloudDataset, custom_collate_fn
 from torch.utils.data import DataLoader, Dataset, IterableDataset
 from lightning.pytorch import LightningDataModule
 from ..config.base_config import BaseConfig
@@ -14,8 +14,8 @@ class DataModule(LightningDataModule):
 
     def train_dataloader(self):
         dataset = PLYPointCloudDataset(directory=self.dataset_path)
-        return DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
+        return DataLoader(dataset, batch_size=self.batch_size, shuffle=True, collate_fn=custom_collate_fn)
 
     def val_dataloader(self):
         dataset = PLYPointCloudDataset(directory=self.dataset_path)
-        return DataLoader(dataset, batch_size=self.batch_size, shuffle=False)
+        return DataLoader(dataset, batch_size=self.batch_size, shuffle=False, collate_fn=custom_collate_fn)
