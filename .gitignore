@@ -165,3 +165,4 @@ mmgeneration/
 data/
 wandb/
 preprocess/
+test.py

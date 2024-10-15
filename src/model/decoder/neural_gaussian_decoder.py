@@ -6,6 +6,9 @@ import torch
 from torch import nn
 import numpy as np
 import math
+from einops import repeat
+
+from diff_gaussian_rasterization import GaussianRasterizationSettings, GaussianRasterizer
 
 
 class NeuralGaussianDecoder(LightningModule):
@@ -21,7 +24,7 @@ class NeuralGaussianDecoder(LightningModule):
         super().__init__()
         self.feat_dim = feat_dim
         self.voxel_num = voxel_num
-        self.offsets = offsets
+        self.n_offsets = offsets
         self.model_path = model_path
         self.freeze_model = freeze_model
         self.bounding_box_min = bounding_box_min
@@ -168,6 +171,82 @@ class NeuralGaussianDecoder(LightningModule):
         self._opacity = nn.Parameter(opacities.requires_grad_(False))
         self.max_radii2D = torch.zeros((self.get_anchor.shape[0]), device="cuda").requires_grad_(False)
 
+    def render(self, viewpoint_camera, features=None):
+        if features is not None:
+            self._anchor_feat = features
+            self._anchor_feat.requires_grad_(True)
 
+        feat = self._anchor_feat
+        anchor = self._anchor
+        grid_scaling = self._scaling
 
+        ob_view = anchor - viewpoint_camera.camera_center
+        ob_dist = ob_view.norm(dim=1, keepdim=True)
+        ob_view = ob_view / ob_dist
 
+        cat_local_view = torch.cat([feat, ob_view, ob_dist], dim=1)  # [N, c+3+1]
+        cat_local_view_wodist = torch.cat([feat, ob_view], dim=1)  # [N, c+3]
+
+        neural_opacity = self.mlp_opacity(cat_local_view_wodist)
+        grid_offsets = self.mlp_offsets(cat_local_view_wodist)
+
+        neural_opacity = neural_opacity.reshape([-1, 1])
+        mask = (neural_opacity > 0.0)
+        mask = mask.view(-1)
+        opacity = neural_opacity[mask]
+        color = self.mlp_color(cat_local_view_wodist)
+        color = color.reshape([anchor.shape[0] * self.n_offsets, 3])  # [mask]
+        scale_rot = self.mlp_cov(cat_local_view_wodist)
+        scale_rot = scale_rot.reshape([anchor.shape[0] * self.n_offsets, 7])
+        offsets = grid_offsets.view([-1, 3])
+
+        concatenated = torch.cat([grid_scaling, anchor], dim=-1)
+        concatenated_repeated = repeat(concatenated, 'n (c) -> (n k) (c)', k=self.n_offsets)
+        concatenated_all = torch.cat([concatenated_repeated, color, scale_rot, offsets], dim=-1)
+        masked = concatenated_all[mask]
+        scaling_repeat, repeat_anchor, color, scale_rot, offsets = masked.split([6, 3, 3, 7, 3], dim=-1)
+        scaling = scaling_repeat[:, 3:] * torch.sigmoid(scale_rot[:, :3])
+        rot = self.rotation_activation(scale_rot[:, 3:7])
+
+        offsets = offsets * scaling_repeat[:, :3]
+        xyz = repeat_anchor + offsets
+        rendered_image, radii = self._render_gs(viewpoint_camera, xyz, color, opacity, scaling, rot, neural_opacity, mask)
+        return rendered_image, radii
+
+    def _render_gs(self, viewpoint_camera, xyz, color, opacity, scaling, rot, neural_opacity, mask):
+        tanfovx = math.tan(viewpoint_camera.FoVx * 0.5)
+        tanfovy = math.tan(viewpoint_camera.FoVy * 0.5)
+
+        bg_color = torch.tensor([0.0, 0.0, 0.0], device="cuda").float()
+
+        raster_settings = GaussianRasterizationSettings(
+            image_height=int(viewpoint_camera.image_height),
+            image_width=int(viewpoint_camera.image_width),
+            tanfovx=tanfovx,
+            tanfovy=tanfovy,
+            bg=bg_color,
+            scale_modifier=1.0,
+            viewmatrix=viewpoint_camera.world_view_transform,
+            projmatrix=viewpoint_camera.full_proj_transform,
+            sh_degree=1,
+            campos=viewpoint_camera.camera_center,
+            prefiltered=False,
+            debug=False
+        )
+
+        rasterizer = GaussianRasterizer(raster_settings=raster_settings)
+
+        screenspace_points = torch.zeros_like(xyz, dtype=self._anchor.dtype, requires_grad=True, device="cuda") + 0
+
+        rendered_image, radii = rasterizer(
+            means3D=xyz,
+            means2D=screenspace_points,
+            shs=None,
+            colors_precomp=color,
+            opacities=opacity,
+            scales=scaling,
+            rotations=rot,
+            cov3D_precomp=None
+        )
+
+        return rendered_image, radii
