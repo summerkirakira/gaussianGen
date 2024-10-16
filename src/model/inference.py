@@ -5,8 +5,8 @@ from src.model.diffusions.unet import UNetModel
 from src.model.diffusions.gaussian_diffusion import GaussianDiffusion
 
 
-def inference(diffusion: GaussianDiffusion, model: UNetModel):
-    noise_schedule = NoiseScheduleVP(schedule='discrete', betas=torch.from_numpy(diffusion.betas).to('cuda:0'))
+def inference(diffusion: GaussianDiffusion, model: UNetModel, device):
+    noise_schedule = NoiseScheduleVP(schedule='discrete', betas=torch.from_numpy(diffusion.betas).to(device))
 
     model_fn = mw(
         model,
@@ -23,7 +23,7 @@ def inference(diffusion: GaussianDiffusion, model: UNetModel):
     sample_shape = (1, 32, 32, 32, 32)
 
     with torch.no_grad():
-        noise = torch.randn(sample_shape, device='cuda:0') * 1.0
+        noise = torch.randn(sample_shape, device=device) * 1.0
 
         samples = dpm_solver.sample(
             x=noise,

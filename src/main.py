@@ -13,6 +13,8 @@ from .misc.local_logger import LocalLogger
 from .misc.wandb_tools import update_checkpoint_path
 from .dataset.data_module import DataModule
 from .model.model_wrapper import ModelWrapper
+import os
+from lightning.pytorch.accelerators import CUDAAccelerator
 
 
 @hydra.main(config_path="../config", config_name="main", version_base=None)
@@ -42,15 +44,10 @@ def train(config):
     checkpoint_path = update_checkpoint_path(config.checkpointing.load, config.wandb)
 
     trainer = Trainer(
-        max_epochs=-1,
-        accelerator="gpu",
+        max_epochs=None,
+        accelerator='gpu',
         logger=logger,
-        devices="auto",
-        strategy=(
-            "ddp_find_unused_parameters_true"
-            if torch.cuda.device_count() > 1
-            else "auto"
-        ),
+        devices='auto',
         callbacks=custom_callbacks,
         # val_check_interval=None,
         check_val_every_n_epoch=1000,
@@ -67,7 +64,7 @@ def train(config):
 
     data_module = DataModule(config.dataset)
     if config.load_from_checkpoint:
-        model_wrapper = ModelWrapper.load_from_checkpoint(config.load_from_checkpoint, cfg=config)
+        model_wrapper = ModelWrapper.load_from_checkpoint(config.load_from_checkpoint, cfg=config, strict=False, map_location="cpu")
     else:
         model_wrapper = ModelWrapper(
             config

@@ -52,27 +52,27 @@ class NeuralGaussianDecoder(LightningModule):
             nn.ReLU(True),
             nn.Linear(self.feat_dim, self.n_offsets),
             nn.Tanh()
-        ).cuda()
+        ).to(self.device)
 
         self.mlp_cov = nn.Sequential(
             nn.Linear(self.feat_dim + 3, self.feat_dim),
             nn.ReLU(True),
             nn.Linear(self.feat_dim, 7 * self.n_offsets),
-        ).cuda()
+        ).to(self.device)
 
         self.mlp_offsets = nn.Sequential(
             nn.Linear(self.feat_dim + 3, self.feat_dim),
             nn.ReLU(True),
             nn.Linear(self.feat_dim, 3 * self.n_offsets),
             nn.Tanh()
-        ).cuda()
+        ).to(self.device)
 
         self.mlp_color = nn.Sequential(
             nn.Linear(self.feat_dim + 3, self.feat_dim),
             nn.ReLU(True),
             nn.Linear(self.feat_dim, 3 * self.n_offsets),
             nn.Sigmoid()
-        ).cuda()
+        ).to(self.device)
 
     def setup_functions(self):
         def build_covariance_from_scaling_rotation(scaling, scaling_modifier, rotation):
@@ -102,11 +102,11 @@ class NeuralGaussianDecoder(LightningModule):
         torch.save(model_dict, path)
 
     def load_model_legacy(self, path: Path):
-        self.mlp_cov.load_state_dict(torch.load(path / 'mlp_cov.pth', weights_only=True))
-        self.mlp_opacity.load_state_dict(torch.load(path / 'mlp_opacity.pth', weights_only=True))
-        self.mlp_color.load_state_dict(torch.load(path / 'mlp_color.pth', weights_only=True))
+        self.mlp_cov.load_state_dict(torch.load(path / 'mlp_cov.pth', weights_only=True, map_location='cpu'))
+        self.mlp_opacity.load_state_dict(torch.load(path / 'mlp_opacity.pth', weights_only=True, map_location='cpu'))
+        self.mlp_color.load_state_dict(torch.load(path / 'mlp_color.pth', weights_only=True, map_location='cpu'))
         # self.mlp_scaling.load_state_dict(torch.load(path / 'mlp_scaling.pth'))
-        self.mlp_offsets.load_state_dict(torch.load(path / 'mlp_offsets.pth', weights_only=True))
+        self.mlp_offsets.load_state_dict(torch.load(path / 'mlp_offsets.pth', weights_only=True, map_location='cpu'))
 
     def load_model(self, path: Path):
         if path.is_dir():
@@ -162,16 +162,16 @@ class NeuralGaussianDecoder(LightningModule):
 
     def initial_voxel_grid(self):
         points = self.generate_voxel_grid()
-        fused_point_cloud = torch.tensor(np.asarray(points)).float().cuda()
-        anchors_feat = torch.zeros((fused_point_cloud.shape[0], self.feat_dim)).float().cuda()
+        fused_point_cloud = torch.tensor(np.asarray(points)).float().to(self.device)
+        anchors_feat = torch.zeros((fused_point_cloud.shape[0], self.feat_dim)).float().to(self.device)
 
-        scales = torch.ones((fused_point_cloud.shape[0], 6)).float().cuda()
+        scales = torch.ones((fused_point_cloud.shape[0], 6)).float().to(self.device)
         scales *= math.log(1 / 32)
 
-        rots = torch.zeros((fused_point_cloud.shape[0], 4), device="cuda")
+        rots = torch.zeros((fused_point_cloud.shape[0], 4), device=self.device)
         rots[:, 0] = 1
 
-        opacities = inverse_sigmoid(0.1 * torch.ones((fused_point_cloud.shape[0], 1), dtype=torch.float, device="cuda"))
+        opacities = inverse_sigmoid(0.1 * torch.ones((fused_point_cloud.shape[0], 1), dtype=torch.float, device=self.device))
 
         self._anchor = nn.Parameter(fused_point_cloud.requires_grad_(False))
         # self._offset = nn.Parameter(offsets.requires_grad_(True))
@@ -179,7 +179,7 @@ class NeuralGaussianDecoder(LightningModule):
         self._scaling = nn.Parameter(scales.requires_grad_(False))
         self._rotation = nn.Parameter(rots.requires_grad_(False))
         self._opacity = nn.Parameter(opacities.requires_grad_(False))
-        self.max_radii2D = torch.zeros((self._anchor.shape[0]), device="cuda").requires_grad_(False)
+        self.max_radii2D = torch.zeros((self._anchor.shape[0]), device=self.device).requires_grad_(False)
 
     def render(self, viewpoint_camera, features) -> Tuple[torch.Tensor, torch.Tensor]:
         # if features is not None:
@@ -228,7 +228,7 @@ class NeuralGaussianDecoder(LightningModule):
         tanfovx = math.tan(viewpoint_camera.FoVx * 0.5)
         tanfovy = math.tan(viewpoint_camera.FoVy * 0.5)
 
-        bg_color = torch.tensor([0.0, 0.0, 0.0], device="cuda").float()
+        bg_color = torch.tensor([0.0, 0.0, 0.0], device=self.device).float()
 
         raster_settings = GaussianRasterizationSettings(
             image_height=int(viewpoint_camera.image_height),
@@ -247,7 +247,7 @@ class NeuralGaussianDecoder(LightningModule):
 
         rasterizer = GaussianRasterizer(raster_settings=raster_settings)
 
-        screenspace_points = torch.zeros_like(xyz, dtype=self._anchor.dtype, requires_grad=True, device="cuda") + 0
+        screenspace_points = torch.zeros_like(xyz, dtype=self._anchor.dtype, requires_grad=True, device=self.device) + 0
 
         rendered_image, radii = rasterizer(
             means3D=xyz,

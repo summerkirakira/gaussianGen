@@ -808,16 +808,18 @@ class GaussianDiffusion:
         terms = {}
 
         if self.loss_type == LossType.KL or self.loss_type == LossType.RESCALED_KL:
-            terms['loss'] = self._vb_terms_bpd(
+            model_output = self._vb_terms_bpd(
                 model=model,
                 x_start=x_start,
                 x_t=x_t,
                 t=t,
                 clip_denoised=False,
                 model_kwargs=model_kwargs,
-            )['output']
+            )
+            terms['loss'] = model_output['output']
             if self.loss_type == LossType.RESCALED_KL:
                 terms['loss'] *= self.num_timesteps
+
         elif self.loss_type == LossType.MSE or self.loss_type == LossType.RESCALED_MSE:
             model_output = model(x_t, self._scale_timesteps(t), **model_kwargs)
 

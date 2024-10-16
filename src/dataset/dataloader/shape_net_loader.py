@@ -41,7 +41,7 @@ class PLYPointCloudDataset(Dataset):
 
         uuid = file_path.stem
 
-        triplane_feature = torch.load(file_dir / f"{uuid}.feat.pth", weights_only=True)
+        triplane_feature = torch.load(file_dir / f"{uuid}.feat.pth", weights_only=True, map_location='cpu')
 
         plydata = PlyData.read(file_path)
         max_sh_degree = 3
@@ -78,12 +78,12 @@ class PLYPointCloudDataset(Dataset):
             rots[:, idx] = np.asarray(plydata.elements[0][attr_name])
 
         sample = {
-            'xyz': torch.tensor(xyz, dtype=torch.float).to('cuda'),
-            'f_dc': torch.tensor(features_dc, dtype=torch.float).to('cuda').transpose(1, 2).contiguous(),
-            'f_rest': torch.tensor(features_extra, dtype=torch.float).to('cuda').transpose(1, 2).contiguous(),
-            'opacity': torch.tensor(opacities, dtype=torch.float).to('cuda'),
-            'scale': torch.tensor(scales, dtype=torch.float).to('cuda'),
-            'rot': torch.tensor(rots, dtype=torch.float).to('cuda'),
+            'xyz': torch.tensor(xyz, dtype=torch.float),
+            'f_dc': torch.tensor(features_dc, dtype=torch.float).transpose(1, 2).contiguous(),
+            'f_rest': torch.tensor(features_extra, dtype=torch.float).transpose(1, 2).contiguous(),
+            'opacity': torch.tensor(opacities, dtype=torch.float),
+            'scale': torch.tensor(scales, dtype=torch.float),
+            'rot': torch.tensor(rots, dtype=torch.float),
             'name': file_path.stem,
             'features': triplane_feature
         }

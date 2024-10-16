@@ -2,11 +2,16 @@ defaults:
   - dataset: car
 
 wandb:
-    project: gaussian_gen
+    project: gaussian_gen_dev
     entity: summerkirakira
     name: Car Test
     version: 0.1.3
     disabled: false
+
+model:
+  diffusion:
+    use_kl: false
+    min_snr: true
 
 checkpointing:
   every_n_train_steps: 5000

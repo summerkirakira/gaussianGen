@@ -166,3 +166,4 @@ data/
 wandb/
 preprocess/
 test.py
+decoder_model/

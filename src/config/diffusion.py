@@ -10,6 +10,7 @@ class DiffusionConfig(BaseModel):
     predict_xstart: bool = True
     rescale_timesteps: bool = True
     rescale_learned_sigmas: bool = True
+    min_snr: bool = False
 
     class Config:
         extra = "forbid"

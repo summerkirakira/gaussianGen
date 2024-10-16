@@ -1,6 +1,7 @@
 from typing import List, Optional
 from pydantic import BaseModel, Field
 
+
 class UnetConfig(BaseModel):
     dims: int = 3
     image_size: int = 32
@@ -22,7 +23,7 @@ class UnetConfig(BaseModel):
     att_pool_heads: int = 64
     disable_self_attentions: bool = False
     unconditional_gen: bool = True
-    precision: str = "16"
+    precision: str = "32"
 
     class Config:
         extra = "forbid"
