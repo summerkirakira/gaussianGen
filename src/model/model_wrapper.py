@@ -86,8 +86,7 @@ class ModelWrapper(LightningModule):
 
         losses = losses["loss"].mean()
 
-        # loss = loss_l1 + loss_lpips
-        loss = losses
+        loss = loss_l1 + loss_lpips + losses
 
         self.log("loss_ddpm", losses)
 
@@ -168,7 +167,7 @@ class ModelWrapper(LightningModule):
         ...
 
     def configure_optimizers(self):
-        diffusion_optimizer = torch.optim.AdamW(lr=1e-6, weight_decay=1e-7, params=self.unet.parameters())
+        diffusion_optimizer = torch.optim.AdamW(lr=1e-4, weight_decay=1e-5, params=self.unet.parameters())
         decoder_optimizer = torch.optim.AdamW(lr=1e-4, weight_decay=1e-5, params=self.decoder.parameters())
         return [
             {"optimizer": diffusion_optimizer},
