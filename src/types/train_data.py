@@ -16,7 +16,7 @@ class TrainDataGaussianType(BaseModel):
         class Config:
             arbitrary_types_allowed = True
 
-    # features: [TensorType]
+    features: [TensorType]
     gaussian_model: GaussianModel
     # labels: [TensorType]
 

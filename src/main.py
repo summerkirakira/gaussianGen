@@ -52,12 +52,14 @@ def train(config):
             else "auto"
         ),
         callbacks=custom_callbacks,
-        # val_check_interval=config.trainer.val_check_interval,
-        enable_progress_bar=False,
+        # val_check_interval=None,
+        check_val_every_n_epoch=1000,
+        enable_progress_bar=True,
         gradient_clip_val=config.trainer.gradient_clip_val,
         max_steps=config.trainer.max_steps,
-        plugins=[SLURMEnvironment(auto_requeue=False)],
+        # plugins=[SLURMEnvironment(auto_requeue=False)],
         log_every_n_steps=1,
+        # enable_validation=False
     )
 
     torch.manual_seed(config.seed + trainer.global_rank)

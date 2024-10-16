@@ -17,7 +17,17 @@ class PLYPointCloudDataset(Dataset):
         """
         self.directory = Path(directory)
         self.transform = transform
-        self.file_list = list(self.directory.glob('*.ply'))
+        self.file_list = self.get_valid_file_list()
+
+    def get_valid_file_list(self):
+        temp_file_list = list(self.directory.glob('*.ply'))
+        file_list = []
+        for file_path in temp_file_list:
+            file_dir = file_path.parent
+            uuid = file_path.stem
+            if (file_dir / f"{uuid}.feat.pth").exists():
+                file_list.append(file_path)
+        return file_list
 
     def __len__(self) -> int:
         # 返回数据集中样本的数量
@@ -31,7 +41,7 @@ class PLYPointCloudDataset(Dataset):
 
         uuid = file_path.stem
 
-        # triplane_feature = torch.load(file_dir / f"{uuid}.pt")
+        triplane_feature = torch.load(file_dir / f"{uuid}.feat.pth")
 
         plydata = PlyData.read(file_path)
         max_sh_degree = 3
@@ -75,7 +85,7 @@ class PLYPointCloudDataset(Dataset):
             'scale': torch.tensor(scales, dtype=torch.float).to('cuda'),
             'rot': torch.tensor(rots, dtype=torch.float).to('cuda'),
             'name': file_path.stem,
-            # 'features': triplane_feature
+            'features': triplane_feature
         }
 
         if self.transform:
@@ -108,7 +118,7 @@ def custom_collate_fn(batch) -> TrainDataGaussianType:
     data = {
         'gaussian_model': gaussian_model,
         # 'labels': [None for _ in batch],
-        # 'features': [sample['features'] for sample in batch]
+        'features': [sample['features'] for sample in batch]
     }
 
     return TrainDataGaussianType(**data)

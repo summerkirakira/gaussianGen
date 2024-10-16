@@ -70,7 +70,8 @@ def _ssim(img1, img2, window, window_size, channel, size_average=True):
     else:
         return ssim_map.mean(1).mean(1).mean(1)
 
+loss_fn_alex = lpips.LPIPS(net='alex')
+loss_fn_alex.cuda()
+
 def lpips_loss(img1, img2):
-    loss_fn_alex = lpips.LPIPS(net='alex')
-    loss_fn_alex.cuda()
     return loss_fn_alex(img1, img2).mean()

@@ -17,6 +17,9 @@ from src.types import TrainDataGaussianType
 from .decoder_legacy.gaussian_splatting.utils.camera_model import MiniCam
 from .decoder.neural_gaussian_decoder import NeuralGaussianDecoder
 from PIL import Image
+from pathlib import Path
+from .inference import inference
+
 
 
 class ModelWrapper(LightningModule):
@@ -43,31 +46,87 @@ class ModelWrapper(LightningModule):
         self.automatic_optimization = False
         self.schedule_sampler = UniformSampler(cfg.model.diffusion.steps)
 
+        self.decoder.load_model(Path('/home/summerkirakira/Documents/Code/gaussianGen/preprocess/model_pth'))
+        self.decoder.freeze()
+
 
     @property
     def model_parameters(self):
             return [self.unet.parameters(), self.decoder.parameters()]
 
     def training_step(self, batch: TrainDataGaussianType, batch_idx):
+
+        unet_optimizer, decoder_optimizer = self.optimizers()
+        unet_optimizer.zero_grad()
+        decoder_optimizer.zero_grad()
+
+
         camera_gt = MiniCam.get_random_cam()
-        original_image = self.render_original(batch.gaussian_model, camera_gt).render
-        
+        original_images = self.render_original(batch.gaussian_model, camera_gt)
+        t, _ = self.schedule_sampler.sample(original_images.shape[0], device=dist.dev())
+        features = self.get_features_batch(batch)
+        losses, output = self.diffusion_model.training_losses(self.unet, features, t)
+        output_features = output['x_t'].permute(0, 2, 3, 4, 1).reshape(original_images.shape[0], -1, 32)
+        pred_images = self.get_predicted_image(output_features, camera_gt)
+        loss_l1 = l1_loss(pred_images, original_images)
+        loss_lpips = lpips_loss(pred_images, original_images)
+
+        losses = losses["loss"].mean()
+
+        # if self.global_step > 1000:
+        #     loss = losses + loss_l1 + loss_lpips
+        # else:
+        loss = loss_l1 + loss_lpips
+        self.log("loss", loss)
+
+        loss.backward()
+
+        if self.global_step % 100 == 0:
+            self.log_image(pred_images[0], original_images[0], "image")
+            with torch.no_grad():
+                camera_random = MiniCam.get_random_cam()
+                sample = inference(self.diffusion_model, self.unet)
+                sample = sample.permute(0, 2, 3, 4, 1).reshape(1, -1, 32)
+                image = self.decoder.render(camera_random, sample[0])[0]
+                wandb.log({"sample": [wandb.Image(image)]})
 
 
+        unet_optimizer.step()
+        decoder_optimizer.step()
+
+    def get_predicted_image(self, features, camera_gt):
+        pred_images = []
+        for i in range(features.shape[0]):
+            pred_images.append(self.decoder.render(camera_gt, features[i])[0])
+        return torch.stack(pred_images, dim=0)
+
+    def get_features_batch(self, batch: TrainDataGaussianType):
+        feature_list = []
+        for i in range(len(batch.features)):
+            feature_list.append(
+                batch.features[i].reshape(32, 32, 32, 32).permute(3, 0, 1, 2)
+            )
+        features = torch.stack(feature_list, dim=0)
+        return features
 
     def record_diffusion_logs(self, log_vars: Dict[str, Any]):
         self.log("loss_ddpm_mse", log_vars["loss_ddpm_mse"])
 
-    def render_original(self, original_gs: TrainDataGaussianType.GaussianModel, viewpoint_camera: MiniCam):
-        return render_gs_cuda(
-            original_gs.xyz[0],
-            original_gs.f_dc[0],
-            original_gs.f_rest[0],
-            original_gs.opacity[0],
-            original_gs.scale[0],
-            original_gs.rot[0],
-            viewpoint_camera,
-        )
+    def render_original(self, original_gs: TrainDataGaussianType.GaussianModel, viewpoint_camera: MiniCam) -> Tensor:
+        image_list = []
+        for i in range(len(original_gs.xyz)):
+            image_list.append(
+                self.render_gs(
+                    original_gs.xyz[i],
+                    original_gs.f_dc[i],
+                    original_gs.f_rest[i],
+                    original_gs.opacity[i],
+                    original_gs.scale[i],
+                    original_gs.rot[i],
+                    viewpoint_camera
+                ).render
+            )
+        return torch.stack(image_list, dim=0)
 
     def render_gs(self, xyz_gt, f_dc_gt, f_rest_gt, opacities_gt, scale_gt, rot_gt, viewpoint_camera, color_precomputed=None):
         return render_gs_cuda(xyz_gt, f_dc_gt, f_rest_gt, opacities_gt, scale_gt, rot_gt, viewpoint_camera, color_precomputed)
@@ -78,6 +137,7 @@ class ModelWrapper(LightningModule):
         concatenated_img[ concatenated_img > 255 ] = 255
         wandb.log({name: [wandb.Image(concatenated_img)]})
 
+
     def validation_step(self, batch, batch_idx):
         ...
 
@@ -85,8 +145,8 @@ class ModelWrapper(LightningModule):
         ...
 
     def configure_optimizers(self):
-        diffusion_optimizer = torch.optim.AdamW(lr=1e-4, weight_decay=0, params=self.unet.parameters())
-        decoder_optimizer = torch.optim.Adam(lr=1e-4, weight_decay=0, params=self.decoder.parameters())
+        diffusion_optimizer = torch.optim.AdamW(lr=1e-4, weight_decay=1e-5, params=self.unet.parameters())
+        decoder_optimizer = torch.optim.AdamW(lr=1e-4, weight_decay=1e-5, params=self.decoder.parameters())
         return [
             {"optimizer": diffusion_optimizer},
             {"optimizer": decoder_optimizer},

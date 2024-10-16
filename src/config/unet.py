@@ -16,8 +16,8 @@ class UnetConfig(BaseModel):
     resblock_updown: bool = True
     encoder_dim: int = 4096
     encoder_channels: Optional[int] = None
-    in_channels: int = 14
-    out_channels: int = 28
+    in_channels: int = 32
+    out_channels: int = 64
     activation: str = "silu"
     att_pool_heads: int = 64
     disable_self_attentions: bool = False

@@ -181,12 +181,13 @@ class NeuralGaussianDecoder(LightningModule):
         self._opacity = nn.Parameter(opacities.requires_grad_(False))
         self.max_radii2D = torch.zeros((self._anchor.shape[0]), device="cuda").requires_grad_(False)
 
-    def render(self, viewpoint_camera, features=None) -> Tuple[torch.Tensor, torch.Tensor]:
-        if features is not None:
-            self._anchor_feat = features
-            self._anchor_feat.requires_grad_(True)
+    def render(self, viewpoint_camera, features) -> Tuple[torch.Tensor, torch.Tensor]:
+        # if features is not None:
+        #     self._anchor_feat = features
+        #     self._anchor_feat.requires_grad_(True)
 
-        feat = self._anchor_feat
+        # feat = self._anchor_feat
+        feat = features
         anchor = self._anchor
         grid_scaling = self.scaling_activation(self._scaling)
 
@@ -194,7 +195,7 @@ class NeuralGaussianDecoder(LightningModule):
         ob_dist = ob_view.norm(dim=1, keepdim=True)
         ob_view = ob_view / ob_dist
 
-        cat_local_view = torch.cat([feat, ob_view, ob_dist], dim=1)  # [N, c+3+1]
+        # cat_local_view = torch.cat([feat, ob_view, ob_dist], dim=1)  # [N, c+3+1]
         cat_local_view_wodist = torch.cat([feat, ob_view], dim=1)  # [N, c+3]
 
         neural_opacity = self.mlp_opacity(cat_local_view_wodist)
