@@ -41,7 +41,7 @@ class PLYPointCloudDataset(Dataset):
 
         uuid = file_path.stem
 
-        triplane_feature = torch.load(file_dir / f"{uuid}.feat.pth")
+        triplane_feature = torch.load(file_dir / f"{uuid}.feat.pth", weights_only=True)
 
         plydata = PlyData.read(file_path)
         max_sh_degree = 3

@@ -56,13 +56,13 @@ class ModelWrapper(LightningModule):
         unet_optimizer.zero_grad()
         decoder_optimizer.zero_grad()
 
-        camera_gt = MiniCam.get_random_cam()
-        original_images = self.render_original(batch.gaussian_model, camera_gt)
+        camera_gts = [MiniCam.get_random_cam() for _ in range(len(batch.gaussian_model.xyz))]
+        original_images = self.render_original(batch.gaussian_model, camera_gts)
         t, _ = self.schedule_sampler.sample(original_images.shape[0], device=dist.dev())
         features = self.get_features_batch(batch)
         losses, output = self.diffusion_model.training_losses(self.unet, features, t)
         output_features = output['x_t'].permute(0, 2, 3, 4, 1).reshape(original_images.shape[0], -1, 32)
-        pred_images = self.get_predicted_image(output_features, camera_gt)
+        pred_images = self.get_predicted_image(output_features, camera_gts)
         loss_l1 = l1_loss(pred_images, original_images)
         loss_lpips = lpips_loss(pred_images, original_images)
 
@@ -89,10 +89,10 @@ class ModelWrapper(LightningModule):
         unet_optimizer.step()
         decoder_optimizer.step()
 
-    def get_predicted_image(self, features, camera_gt):
+    def get_predicted_image(self, features: Tensor, camera_gts: list[MiniCam]) -> Tensor:
         pred_images = []
         for i in range(features.shape[0]):
-            pred_images.append(self.decoder.render(camera_gt, features[i])[0])
+            pred_images.append(self.decoder.render(camera_gts[i], features[i])[0])
         return torch.stack(pred_images, dim=0)
 
     def get_features_batch(self, batch: TrainDataGaussianType):
@@ -107,7 +107,7 @@ class ModelWrapper(LightningModule):
     def record_diffusion_logs(self, log_vars: Dict[str, Any]):
         self.log("loss_ddpm_mse", log_vars["loss_ddpm_mse"])
 
-    def render_original(self, original_gs: TrainDataGaussianType.GaussianModel, viewpoint_camera: MiniCam) -> Tensor:
+    def render_original(self, original_gs: TrainDataGaussianType.GaussianModel, viewpoint_cameras: list[MiniCam]) -> Tensor:
         image_list = []
         for i in range(len(original_gs.xyz)):
             image_list.append(
@@ -118,7 +118,7 @@ class ModelWrapper(LightningModule):
                     original_gs.opacity[i],
                     original_gs.scale[i],
                     original_gs.rot[i],
-                    viewpoint_camera
+                    viewpoint_cameras[i]
                 ).render
             )
         return torch.stack(image_list, dim=0)
