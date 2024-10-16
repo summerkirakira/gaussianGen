@@ -30,18 +30,14 @@ class ModelWrapper(LightningModule):
     def __init__(self, cfg: BaseConfig):
         super().__init__()
 
-        # dist.setup_dist()
-        torch.cuda.set_device(dist.dev())
-
         self.diffusion_model: GaussianDiffusion = create_gaussian_diffusion(**cfg.model.diffusion.model_dump())
 
         self.decoder = NeuralGaussianDecoder(**cfg.model.neural_gs.model_dump())
         unet = UNetModel(**cfg.model.unet.model_dump())
-        self.unet = unet.to(dist.dev())
+        self.unet = unet
 
-        print("num of params: {} M".format(sum(p.numel() for p in unet.parameters() if p.requires_grad) / 1e6))
+        # print("num of params: {} M".format(sum(p.numel() for p in unet.parameters() if p.requires_grad) / 1e6))
 
-        # self.decoder: TriplaneDecoder = TriplaneDecoder()
         self.cfg = cfg
         self.automatic_optimization = False
         self.schedule_sampler = UniformSampler(cfg.model.diffusion.steps)
@@ -60,7 +56,6 @@ class ModelWrapper(LightningModule):
         unet_optimizer.zero_grad()
         decoder_optimizer.zero_grad()
 
-
         camera_gt = MiniCam.get_random_cam()
         original_images = self.render_original(batch.gaussian_model, camera_gt)
         t, _ = self.schedule_sampler.sample(original_images.shape[0], device=dist.dev())
@@ -73,10 +68,11 @@ class ModelWrapper(LightningModule):
 
         losses = losses["loss"].mean()
 
-        # if self.global_step > 1000:
-        #     loss = losses + loss_l1 + loss_lpips
-        # else:
         loss = loss_l1 + loss_lpips
+
+        self.log("loss_l1", loss_l1)
+        self.log("loss_lpips", loss_lpips)
+
         self.log("loss", loss)
 
         loss.backward()
@@ -89,7 +85,6 @@ class ModelWrapper(LightningModule):
                 sample = sample.permute(0, 2, 3, 4, 1).reshape(1, -1, 32)
                 image = self.decoder.render(camera_random, sample[0])[0]
                 wandb.log({"sample": [wandb.Image(image)]})
-
 
         unet_optimizer.step()
         decoder_optimizer.step()

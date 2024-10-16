@@ -9,8 +9,8 @@ wandb:
     disabled: false
 
 checkpointing:
-  every_n_train_steps: 10000
+  every_n_train_steps: 5000
   save_top_k: -1
 
-output_path: outputs/bag
+output_path: outputs/car
 

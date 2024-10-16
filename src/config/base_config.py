@@ -43,6 +43,7 @@ class BaseConfig(BaseModel):
     checkpointing: Checkpointing
     trainer: Trainer = Trainer()
     model: Model = Model()
+    load_from_checkpoint: Optional[str] = None
 
     seed: int = 114514
     mode: Literal["train", "test"] = "train"

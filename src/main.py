@@ -66,11 +66,12 @@ def train(config):
     torch.multiprocessing.set_start_method('spawn')
 
     data_module = DataModule(config.dataset)
-
-    model_wrapper = ModelWrapper(
-        config
-    )
-
+    if config.load_from_checkpoint:
+        model_wrapper = ModelWrapper.load_from_checkpoint(config.load_from_checkpoint, cfg=config)
+    else:
+        model_wrapper = ModelWrapper(
+            config
+        )
     if config.mode == "train":
         trainer.fit(model_wrapper, data_module, ckpt_path=checkpoint_path)
     else:
