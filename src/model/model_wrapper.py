@@ -1,3 +1,5 @@
+import random
+
 import torch.optim
 from lightning.pytorch import LightningModule
 from lightning.pytorch.loggers.wandb import WandbLogger
@@ -36,8 +38,6 @@ class ModelWrapper(LightningModule):
         unet = UNetModel(**cfg.model.unet.model_dump())
         self.unet = unet
 
-        # print("num of params: {} M".format(sum(p.numel() for p in unet.parameters() if p.requires_grad) / 1e6))
-
         self.cfg = cfg
         self.automatic_optimization = False
         self.schedule_sampler = UniformSampler(cfg.model.diffusion.steps)
@@ -71,7 +71,9 @@ class ModelWrapper(LightningModule):
         unet_optimizer.zero_grad()
         decoder_optimizer.zero_grad()
 
-        camera_gts = [MiniCam.get_random_cam() for _ in range(len(batch.gaussian_model.xyz))]
+        image_size = random.choice([400, 600, 800, 1000])
+
+        camera_gts = [MiniCam.get_random_cam(image_size, image_size) for _ in range(len(batch.gaussian_model.xyz))]
         original_images = self.render_original(batch.gaussian_model, camera_gts)
         t, _ = self.schedule_sampler.sample(original_images.shape[0], device=self.device)
         features = self.get_features_batch(batch)

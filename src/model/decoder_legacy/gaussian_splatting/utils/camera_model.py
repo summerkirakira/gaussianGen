@@ -121,7 +121,7 @@ class MiniCam:
         self.camera_center = view_inv[3][:3]
 
     @staticmethod
-    def get_random_cam():
+    def get_random_cam(width: int, height: int):
         theta = np.random.uniform(0, 1.5 * np.pi)
         phi = np.random.uniform(0, np.pi)
         camera_pos = spherical_to_cartesian(3, theta, phi)
@@ -130,7 +130,7 @@ class MiniCam:
         view_matrix = create_view_matrix(camera_pos)
 
         view_matrix = torch.tensor(view_matrix, dtype=torch.float32).transpose(0, 1).cuda()
-        return MiniCam(view_matrix)
+        return MiniCam(view_matrix, width=width, height=height)
 
     @staticmethod
     def get_test_cam():
