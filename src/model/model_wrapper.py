@@ -43,7 +43,7 @@ class ModelWrapper(LightningModule):
         self.schedule_sampler = UniformSampler(cfg.model.diffusion.steps)
 
         self.decoder.load_model(Path('decoder_model'))
-        self.decoder.freeze()
+        # self.decoder.freeze()
         self.lpips = LPIPS(net='alex').to(self.device)
 
     def on_save_checkpoint(self, checkpoint):
