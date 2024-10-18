@@ -85,9 +85,9 @@ class ModelWrapper(LightningModule):
         loss_l1 = l1_loss(pred_images, original_images)
         loss_lpips = self.lpips_loss(pred_images, original_images)
 
-        losses = losses["loss"].mean()
+        diff_loss = losses["loss"].mean()
 
-        loss = loss_l1 + loss_lpips + losses
+        loss = loss_l1 + loss_lpips + diff_loss * 0.1
 
         self.log("loss_ddpm", losses)
         self.log("loss_l1", loss_l1)
