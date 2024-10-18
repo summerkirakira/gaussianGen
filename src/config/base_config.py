@@ -37,6 +37,10 @@ class BaseConfig(BaseModel):
         unet: UnetConfig = UnetConfig()
         neural_gs: NeuralGaussianConfig = NeuralGaussianConfig()
 
+        diffusion_loss_weight: float = 1.0
+        l1_loss_weight: float = 1.0
+        lpips_loss_weight: float = 1.0
+
     dataset: Dataset
     wandb: Wandb
     output_path: str

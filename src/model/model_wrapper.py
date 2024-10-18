@@ -87,7 +87,7 @@ class ModelWrapper(LightningModule):
 
         diff_loss = losses["loss"].mean()
 
-        loss = loss_l1 + loss_lpips + diff_loss * 0.1
+        loss = loss_l1 * self.cfg.model.l1_loss_weight + loss_lpips * self.cfg.model.lpips_loss_weight + diff_loss * self.cfg.model.diffusion_loss_weight
 
         self.log("loss_ddpm", diff_loss)
         self.log("loss_l1", loss_l1)
