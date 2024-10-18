@@ -124,9 +124,10 @@ class MiniCam:
 
     @staticmethod
     def get_random_cam(width: int, height: int):
+        distance = random.random() * 1.3 + 1.7
         theta = np.random.uniform(0, 1.5 * np.pi)
         phi = np.random.uniform(0, np.pi)
-        camera_pos = spherical_to_cartesian(3, theta, phi)
+        camera_pos = spherical_to_cartesian(distance, theta, phi)
         # camera_pos = np.array([0, 0, 6])
         # print(f"Camera position: {camera_pos}")
         view_matrix = create_view_matrix(camera_pos)
