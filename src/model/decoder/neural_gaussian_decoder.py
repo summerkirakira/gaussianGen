@@ -287,7 +287,7 @@ class NeuralGaussianDecoder(LightningModule):
         normals = np.zeros_like(xyz)
         f_dc = color.detach().flatten(start_dim=1).contiguous().cpu().numpy()
         # f_rest = self._features_rest.detach().transpose(1, 2).flatten(start_dim=1).contiguous().cpu().numpy()
-        f_rest = np.zeros((xyz.shape[0], 15))
+        f_rest = np.zeros((xyz.shape[0], 45))
         opacities = opacity.detach().cpu().numpy()
         scale = scaling.detach().cpu().numpy()
         rotation = rot.detach().cpu().numpy()
