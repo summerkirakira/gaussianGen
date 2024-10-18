@@ -270,7 +270,7 @@ class NeuralGaussianDecoder(LightningModule):
         # All channels except the 3 DC
         for i in range(3):
             l.append('f_dc_{}'.format(i))
-        for i in range(15):
+        for i in range(45):
             l.append('f_rest_{}'.format(i))
         l.append('opacity')
         for i in range(3):
