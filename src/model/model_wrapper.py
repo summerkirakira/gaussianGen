@@ -39,7 +39,7 @@ class ModelWrapper(LightningModule):
         self.unet = unet
 
         self.cfg = cfg
-        self.automatic_optimization = False
+        # self.automatic_optimization = False
         self.schedule_sampler = UniformSampler(cfg.model.diffusion.steps)
 
         self.decoder.load_model(Path('decoder_model'))
@@ -54,7 +54,7 @@ class ModelWrapper(LightningModule):
 
     @property
     def model_parameters(self):
-        return [self.unet.parameters(), self.decoder.parameters()]
+        return list(self.unet.parameters()) + list(self.decoder.parameters())
 
     def get_pred_x0(self, output, t):
         if self.diffusion_model.model_mean_type == ModelMeanType.START_X:
@@ -67,9 +67,6 @@ class ModelWrapper(LightningModule):
 
     def training_step(self, batch: TrainDataGaussianType, batch_idx):
         batch.move_data(self.device)
-        unet_optimizer, decoder_optimizer = self.optimizers()
-        unet_optimizer.zero_grad()
-        decoder_optimizer.zero_grad()
 
         image_size = random.choice([400, 600, 800, 1000])
 
@@ -93,13 +90,9 @@ class ModelWrapper(LightningModule):
         loss = loss_l1 + loss_lpips + losses
 
         self.log("loss_ddpm", losses)
-
         self.log("loss_l1", loss_l1)
         self.log("loss_lpips", loss_lpips)
-
         self.log("loss", loss)
-
-        loss.backward()
 
         if self.global_step % 100 == 0:
             self.log_image(pred_images[0], original_images[0], "image")
@@ -111,8 +104,7 @@ class ModelWrapper(LightningModule):
                     image = self.decoder.render(camera_random, sample[0])[0]
                 self.log_single_image(image, 'sample')
 
-        unet_optimizer.step()
-        decoder_optimizer.step()
+        return loss
 
     def get_predicted_image(self, features: Tensor, camera_gts: list[MiniCam]) -> Tensor:
         pred_images = []
@@ -172,9 +164,11 @@ class ModelWrapper(LightningModule):
         ...
 
     def configure_optimizers(self):
-        diffusion_optimizer = torch.optim.AdamW(lr=1e-4, weight_decay=1e-5, params=self.unet.parameters())
-        decoder_optimizer = torch.optim.AdamW(lr=1e-4, weight_decay=1e-5, params=self.decoder.parameters())
-        return [
-            {"optimizer": diffusion_optimizer},
-            {"optimizer": decoder_optimizer},
-        ]
+        # diffusion_optimizer = torch.optim.AdamW(lr=1e-4, weight_decay=1e-5, params=self.unet.parameters())
+        # decoder_optimizer = torch.optim.AdamW(lr=1e-4, weight_decay=1e-5, params=self.decoder.parameters())
+        # return [
+        #     {"optimizer": diffusion_optimizer},
+        #     {"optimizer": decoder_optimizer},
+        # ]
+        optimizer = torch.optim.AdamW(lr=1e-4, weight_decay=1e-5, params=self.model_parameters)
+        return optimizer
