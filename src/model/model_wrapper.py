@@ -74,7 +74,8 @@ class ModelWrapper(LightningModule):
         image_size = random.choice([400, 600, 800, 1000])
 
         camera_gts = [MiniCam.get_random_cam(image_size, image_size) for _ in range(len(batch.gaussian_model.xyz))]
-        original_images = self.render_original(batch.gaussian_model, camera_gts)
+        with torch.amp.autocast('cuda', enabled=False):
+            original_images = self.render_original(batch.gaussian_model, camera_gts)
         t, _ = self.schedule_sampler.sample(original_images.shape[0], device=self.device)
         features = self.get_features_batch(batch)
         losses, output = self.diffusion_model.training_losses(self.unet, features, t)
@@ -82,7 +83,8 @@ class ModelWrapper(LightningModule):
         pred_x0 = self.get_pred_x0(output, t)
 
         output_features = pred_x0.permute(0, 2, 3, 4, 1).reshape(original_images.shape[0], -1, 32)
-        pred_images = self.get_predicted_image(output_features, camera_gts)
+        with torch.amp.autocast('cuda', enabled=False):
+            pred_images = self.get_predicted_image(output_features, camera_gts)
         loss_l1 = l1_loss(pred_images, original_images)
         loss_lpips = self.lpips_loss(pred_images, original_images)
 
@@ -105,7 +107,8 @@ class ModelWrapper(LightningModule):
                 camera_random = MiniCam.get_random_cam(width=1200, height=1200)
                 sample = inference(self.diffusion_model, self.unet, self.device)
                 sample = sample.permute(0, 2, 3, 4, 1).reshape(1, -1, 32)
-                image = self.decoder.render(camera_random, sample[0])[0]
+                with torch.amp.autocast('cuda', enabled=False):
+                    image = self.decoder.render(camera_random, sample[0])[0]
                 self.log_single_image(image, 'sample')
 
         unet_optimizer.step()
