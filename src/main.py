@@ -57,6 +57,7 @@ def train(config):
         # plugins=[SLURMEnvironment(auto_requeue=False)],
         log_every_n_steps=1,
         precision='16-mixed',
+        strategy='ddp_find_unused_parameters_true'
         # enable_validation=False
     )
 
