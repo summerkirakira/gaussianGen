@@ -56,6 +56,7 @@ def train(config):
         max_steps=config.trainer.max_steps,
         # plugins=[SLURMEnvironment(auto_requeue=False)],
         log_every_n_steps=1,
+        precision='16-mixed',
         # enable_validation=False
     )
 
