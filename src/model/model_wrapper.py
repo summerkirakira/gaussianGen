@@ -94,6 +94,9 @@ class ModelWrapper(LightningModule):
         self.log("loss_lpips", loss_lpips)
         self.log("loss", loss)
 
+        self.decoder.save_ply(camera_gts[0], output_features[0], Path(f"outputs/{self.global_step}.ply"))
+        raise ValueError("Stop here")
+
         if self.global_step % 100 == 0:
             self.log_image(pred_images[0], original_images[0], "image")
             with torch.no_grad():

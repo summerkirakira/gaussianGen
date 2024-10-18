@@ -7,6 +7,8 @@ from torch import nn
 import numpy as np
 import math
 from einops import repeat
+from ..decoder_legacy.gaussian_splatting.utils.camera_model import MiniCam
+from plyfile import PlyData, PlyElement
 
 from diff_gaussian_rasterization import GaussianRasterizationSettings, GaussianRasterizer
 
@@ -181,12 +183,8 @@ class NeuralGaussianDecoder(LightningModule):
         self._opacity = nn.Parameter(opacities.requires_grad_(False))
         self.max_radii2D = torch.zeros((self._anchor.shape[0]), device=self.device).requires_grad_(False)
 
-    def render(self, viewpoint_camera, features) -> Tuple[torch.Tensor, torch.Tensor]:
-        # if features is not None:
-        #     self._anchor_feat = features
-        #     self._anchor_feat.requires_grad_(True)
 
-        # feat = self._anchor_feat
+    def get_gaussian_properties(self, viewpoint_camera, features):
         feat = features
         anchor = self._anchor
         grid_scaling = self.scaling_activation(self._scaling)
@@ -195,7 +193,7 @@ class NeuralGaussianDecoder(LightningModule):
         ob_dist = ob_view.norm(dim=1, keepdim=True)
         ob_view = ob_view / ob_dist
 
-        # cat_local_view = torch.cat([feat, ob_view, ob_dist], dim=1)  # [N, c+3+1]
+        cat_local_view = torch.cat([feat, ob_view, ob_dist], dim=1)  # [N, c+3+1]
         cat_local_view_wodist = torch.cat([feat, ob_view], dim=1)  # [N, c+3]
 
         neural_opacity = self.mlp_opacity(cat_local_view_wodist)
@@ -221,6 +219,11 @@ class NeuralGaussianDecoder(LightningModule):
 
         offsets = offsets * scaling_repeat[:, :3]
         xyz = repeat_anchor + offsets
+
+        return xyz, color, opacity, scaling, rot, neural_opacity, mask
+
+    def render(self, viewpoint_camera, features) -> Tuple[torch.Tensor, torch.Tensor]:
+        xyz, color, opacity, scaling, rot, neural_opacity, mask = self.get_gaussian_properties(viewpoint_camera, features)
         rendered_image, radii = self._render_gs(viewpoint_camera, xyz, color, opacity, scaling, rot, neural_opacity, mask)
         return rendered_image, radii
 
@@ -261,3 +264,38 @@ class NeuralGaussianDecoder(LightningModule):
         )
 
         return rendered_image, radii
+
+    def construct_list_of_attributes(self):
+        l = ['x', 'y', 'z', 'nx', 'ny', 'nz']
+        # All channels except the 3 DC
+        for i in range(3):
+            l.append('f_dc_{}'.format(i))
+        for i in range(15):
+            l.append('f_rest_{}'.format(i))
+        l.append('opacity')
+        for i in range(3):
+            l.append('scale_{}'.format(i))
+        for i in range(4):
+            l.append('rot_{}'.format(i))
+        return l
+
+    def save_ply(self, cam: MiniCam, features: torch.Tensor, path: Path):
+        xyz, color, opacity, scaling, rot, neural_opacity, mask = self.get_gaussian_properties(cam,
+                                                                                               features)
+
+        xyz = xyz.detach().cpu().numpy()
+        normals = np.zeros_like(xyz)
+        f_dc = color.detach().flatten(start_dim=1).contiguous().cpu().numpy()
+        # f_rest = self._features_rest.detach().transpose(1, 2).flatten(start_dim=1).contiguous().cpu().numpy()
+        f_rest = np.zeros((xyz.shape[0], 15))
+        opacities = opacity.detach().cpu().numpy()
+        scale = scaling.detach().cpu().numpy()
+        rotation = rot.detach().cpu().numpy()
+
+        dtype_full = [(attribute, 'f4') for attribute in self.construct_list_of_attributes()]
+
+        elements = np.empty(xyz.shape[0], dtype=dtype_full)
+        attributes = np.concatenate((xyz, normals, f_dc, f_rest, opacities, scale, rotation), axis=1)
+        elements[:] = list(map(tuple, attributes))
+        el = PlyElement.describe(elements, 'vertex')
+        PlyData([el]).write(path)
