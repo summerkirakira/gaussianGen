@@ -14,8 +14,8 @@ class DataModule(LightningDataModule):
 
     def train_dataloader(self):
         dataset = PLYPointCloudDataset(directory=self.dataset_path)
-        return DataLoader(dataset, batch_size=self.batch_size, shuffle=True, collate_fn=custom_collate_fn)
+        return DataLoader(dataset, batch_size=self.batch_size, shuffle=True, collate_fn=custom_collate_fn, num_workers=self.num_workers)
 
     def val_dataloader(self):
         dataset = PLYPointCloudDataset(directory=self.dataset_path)
-        return DataLoader(dataset, batch_size=self.batch_size, shuffle=False, collate_fn=custom_collate_fn)
+        return DataLoader(dataset, batch_size=self.batch_size, shuffle=False, collate_fn=custom_collate_fn, num_workers=self.num_workers)
