@@ -42,7 +42,7 @@ class ModelWrapper(LightningModule):
         # self.automatic_optimization = False
         self.schedule_sampler = UniformSampler(cfg.model.diffusion.steps)
 
-        self.decoder.load_model(Path('decoder_model'))
+        # self.decoder.load_model(Path('decoder_model'))
         # self.decoder.freeze()
         self.lpips = LPIPS(net='alex').to(self.device)
 

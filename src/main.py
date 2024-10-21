@@ -36,7 +36,7 @@ def train(config):
         logger = LocalLogger()
 
     custom_callbacks = [ModelCheckpoint(
-        output_path / "checkpoints",
+        Path(config.checkpointing.path),
         every_n_train_steps=config.checkpointing.every_n_train_steps,
         save_top_k=config.checkpointing.save_top_k,
     )]

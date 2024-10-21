@@ -26,6 +26,7 @@ class BaseConfig(BaseModel):
         every_n_train_steps: int = 10000
         save_top_k: int = 3
         load: Optional[str] = None
+        path: str = "outputs/checkpoints"
 
     class Trainer(BaseModel):
         val_check_interval: int = 0
