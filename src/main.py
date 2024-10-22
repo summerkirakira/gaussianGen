@@ -36,9 +36,12 @@ def train(config):
         logger = LocalLogger()
 
     custom_callbacks = [ModelCheckpoint(
-        Path(config.checkpointing.path),
+        dirpath=Path(config.checkpointing.path),
         every_n_train_steps=config.checkpointing.every_n_train_steps,
         save_top_k=config.checkpointing.save_top_k,
+        save_last=True,
+        monitor='loss',
+        mode='min',
     )]
 
     checkpoint_path = update_checkpoint_path(config.checkpointing.load, config.wandb)
