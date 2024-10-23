@@ -6,15 +6,12 @@ import torch
 from .config import BaseConfig
 from lightning.pytorch.loggers.wandb import WandbLogger
 from lightning.pytorch import Trainer
-from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
-from lightning.pytorch.plugins.environments import SLURMEnvironment
+from lightning.pytorch.callbacks import ModelCheckpoint
 
 from .misc.local_logger import LocalLogger
 from .misc.wandb_tools import update_checkpoint_path
 from .dataset.data_module import DataModule
 from .model.model_wrapper import ModelWrapper
-import os
-from lightning.pytorch.accelerators import CUDAAccelerator
 
 
 @hydra.main(config_path="../config", config_name="main", version_base=None)

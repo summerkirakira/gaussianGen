@@ -173,5 +173,6 @@ class ModelWrapper(LightningModule):
         #     {"optimizer": diffusion_optimizer},
         #     {"optimizer": decoder_optimizer},
         # ]
-        optimizer = torch.optim.AdamW(lr=1e-4, weight_decay=1e-5, params=self.model_parameters)
+        # optimizer = torch.optim.AdamW(lr=1e-4, weight_decay=1e-5, params=self.model_parameters)
+        optimizer = torch.optim.Adam(lr=1e-4, params=self.model_parameters)
         return optimizer
