@@ -29,7 +29,7 @@ def inference(diffusion: GaussianDiffusion, model: UNetModel, device):
             x=noise,
             steps=1000,
             t_start=1.0,
-            t_end=1 / 1000,
+            t_end=1e-4,
             order=3,
             skip_type='time_uniform',
             method='multistep',
