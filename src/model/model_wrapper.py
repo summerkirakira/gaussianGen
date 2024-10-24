@@ -100,12 +100,12 @@ class ModelWrapper(LightningModule):
         if self.global_step % 100 == 0:
             self.log_image(pred_images[0], original_images[0], "image")
             with torch.no_grad():
-                camera_random = MiniCam.get_random_cam(width=1200, height=1200)
+                camera_random = MiniCam.get_test_cam()
                 sample = inference(self.diffusion_model, self.unet, self.device)
                 sample = sample.permute(0, 2, 3, 4, 1).reshape(1, -1, 32)
                 with torch.amp.autocast('cuda', enabled=False):
                     image = self.decoder.render(camera_random, sample[0])[0]
-                self.log_single_image(image, 'sample')
+                self.log_single_image(image, 'Inference')
 
         return loss
 
