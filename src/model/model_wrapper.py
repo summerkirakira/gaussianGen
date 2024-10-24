@@ -68,7 +68,7 @@ class ModelWrapper(LightningModule):
     def training_step(self, batch: TrainDataGaussianType, batch_idx):
         batch.move_data(self.device)
 
-        image_size = random.choice([400, 600, 800, 1000])
+        image_size = random.choices([400, 600, 800, 1000], weights=[0.4, 0.3, 0.2, 0.1])[0]
 
         camera_gts = [MiniCam.get_random_cam(image_size, image_size) for _ in range(len(batch.gaussian_model.xyz))]
         with torch.amp.autocast('cuda', enabled=False):
