@@ -32,6 +32,7 @@ class BaseConfig(BaseModel):
         val_check_interval: int = 0
         max_steps: int = 300000
         gradient_clip_val: Optional[float] = None
+        learning_rate: float = 1e-4
 
     class Model(BaseModel):
         diffusion: DiffusionConfig = DiffusionConfig()
