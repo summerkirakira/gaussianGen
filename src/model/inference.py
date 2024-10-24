@@ -27,7 +27,7 @@ def inference(diffusion: GaussianDiffusion, model: UNetModel, device):
 
         samples = dpm_solver.sample(
             x=noise,
-            steps=100,
+            steps=1000,
             t_start=1.0,
             t_end=1 / 1000,
             order=3,
