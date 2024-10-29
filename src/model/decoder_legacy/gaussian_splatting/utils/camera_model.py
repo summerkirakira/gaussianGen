@@ -71,7 +71,7 @@ def viewmatrix(z, up, pos):
     return m
 
 
-def create_view_matrix(camera_position):
+def create_view_matrix(camera_position, parallel_to_xy_plane=False):
     """
     创建一个相机到世界的变换矩阵（c2w），
     使得相机坐标系的 Z 轴 (0, 0, 1) 映射到世界坐标系的原点
@@ -86,7 +86,10 @@ def create_view_matrix(camera_position):
     # 计算相机的z轴（前向量）
     # 这里我们将相机的z轴指向世界坐标系的原点
     forward = normalize(-camera_position)  # 从相机位置指向原点
-    temp_vec = np.random.rand(3)
+    if parallel_to_xy_plane:
+        temp_vec = np.array([0, 0, 1])
+    else:
+        temp_vec = np.random.rand(3)
     right = normalize(np.cross(forward, temp_vec))
     up = np.cross(forward, right)
     w2c = np.eye(4)
@@ -132,6 +135,20 @@ class MiniCam:
         # print(f"Camera position: {camera_pos}")
         view_matrix = create_view_matrix(camera_pos)
 
+        view_matrix = torch.tensor(view_matrix, dtype=torch.float32).transpose(0, 1).cuda()
+        return MiniCam(view_matrix, width=width, height=height)
+
+    @staticmethod
+    def get_cam(
+            width: int = 800,
+            height: int = 800,
+            distance: float = 1.5,
+            theta: float = 0,
+            phi: float = 0,
+    ):
+        camera_pos = spherical_to_cartesian(distance, theta, phi)
+        # camera_pos = np.array([1, 1, 3])
+        view_matrix = create_view_matrix(camera_pos, parallel_to_xy_plane=True)
         view_matrix = torch.tensor(view_matrix, dtype=torch.float32).transpose(0, 1).cuda()
         return MiniCam(view_matrix, width=width, height=height)
 

@@ -4,6 +4,7 @@ from typing import Optional, Literal
 from .diffusion import DiffusionConfig
 from .unet import UnetConfig
 from .neural_gs import NeuralGaussianConfig
+from .inference import InferenceConfig
 
 
 class BaseConfig(BaseModel):
@@ -43,13 +44,15 @@ class BaseConfig(BaseModel):
         l1_loss_weight: float = 1.0
         lpips_loss_weight: float = 1.0
 
-    dataset: Dataset
+    dataset: Optional[Dataset] = None
     wandb: Wandb
-    output_path: str
+    output_path: str = "outputs"
     checkpointing: Checkpointing
     trainer: Trainer = Trainer()
     model: Model = Model()
     load_from_checkpoint: Optional[str] = None
+    inference: InferenceConfig = InferenceConfig()
+    is_inference: bool = False
 
     seed: int = 114514
     mode: Literal["train", "test"] = "train"

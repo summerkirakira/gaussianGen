@@ -227,6 +227,7 @@ class NeuralGaussianDecoder(LightningModule):
         rendered_image, radii = self._render_gs(viewpoint_camera, xyz, color, opacity, scaling, rot, neural_opacity, mask)
         return rendered_image, radii
 
+
     def _render_gs(self, viewpoint_camera, xyz, color, opacity, scaling, rot, neural_opacity, mask):
         tanfovx = math.tan(viewpoint_camera.FoVx * 0.5)
         tanfovy = math.tan(viewpoint_camera.FoVy * 0.5)

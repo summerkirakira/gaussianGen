@@ -94,9 +94,6 @@ class ModelWrapper(LightningModule):
         self.log("loss_lpips", loss_lpips)
         self.log("loss", loss)
 
-        # self.decoder.save_ply(camera_gts[0], output_features[0], Path(f"outputs/{self.global_step}.ply"))
-        # raise ValueError("Stop here")
-
         if self.global_step % 300 == 0:
             self.log_image(pred_images[0], original_images[0], "image")
             with torch.no_grad():
@@ -176,3 +173,21 @@ class ModelWrapper(LightningModule):
         # optimizer = torch.optim.AdamW(lr=1e-4, weight_decay=1e-5, params=self.model_parameters)
         optimizer = torch.optim.Adam(lr=self.cfg.trainer.learning_rate, params=self.model_parameters)
         return optimizer
+
+    def inference_unconditioned(self, cameras: list[MiniCam]) -> list[Image]:
+        images: list[Image] = []
+        with torch.no_grad():
+            sample = inference(self.diffusion_model, self.unet, self.device)
+            sample = sample.permute(0, 2, 3, 4, 1).reshape(1, -1, 32)
+            # xyz, color, opacity, scaling, rot, neural_opacity, mask = self.decoder.get_gaussian_properties(cameras[0], sample[0])
+            for camera in cameras:
+                with torch.amp.autocast('cuda', enabled=False):
+                    image = self.decoder.render(camera, sample[0])[0]
+                    # image, _ = self.decoder._render_gs(camera, xyz, color, opacity, scaling, rot, neural_opacity, mask)
+                image = torch.clamp(image, 0, 1)
+
+                image = image.permute(1, 2, 0).cpu().numpy()
+                image = (image * 255).astype('uint8')
+                image = Image.fromarray(image)
+                images.append(image)
+        return images
