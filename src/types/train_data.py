@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Literal
+from typing import Literal, Optional
 from .tensor_type import TensorType
 
 
@@ -16,7 +16,10 @@ class TrainDataGaussianType(BaseModel):
         class Config:
             arbitrary_types_allowed = True
 
-    features: list[TensorType]
+    anchor_feature: list[TensorType]
+    label_feature: Optional[list[TensorType]]
+    skeleton_points: Optional[list[TensorType]]
+
     gaussian_model: GaussianModel
 
     # labels: [TensorType]
@@ -37,4 +40,8 @@ class TrainDataGaussianType(BaseModel):
         self.gaussian_model.rot = self.move_list(self.gaussian_model.rot, device)
 
         # 移动 features
-        self.features = self.move_list(self.features, device)
+        self.anchor_feature = self.move_list(self.anchor_feature, device)
+        if self.label_feature is not None:
+            self.label_feature = self.move_list(self.label_feature, device)
+        if self.skeleton_points is not None:
+            self.skeleton_points = self.move_list(self.skeleton_points, device)

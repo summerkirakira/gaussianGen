@@ -75,7 +75,9 @@ class ModelWrapper(LightningModule):
             original_images = self.render_original(batch.gaussian_model, camera_gts)
         t, _ = self.schedule_sampler.sample(original_images.shape[0], device=self.device)
         features = self.get_features_batch(batch)
-        losses, output = self.diffusion_model.training_losses(self.unet, features, t)
+        labels = self.get_labels_batch(batch)
+        skeletons = self.get_skeleton_batch(batch)
+        losses, output = self.diffusion_model.training_losses(self.unet, features, t, label=labels, skeleton_points=skeletons)
 
         pred_x0 = self.get_pred_x0(output, t)
 
@@ -94,11 +96,11 @@ class ModelWrapper(LightningModule):
         self.log("loss_lpips", loss_lpips)
         self.log("loss", loss)
 
-        if self.global_step % 300 == 0:
+        if self.global_step % 300 == 0 and self.global_step != 0:
             self.log_image(pred_images[0], original_images[0], "image")
             with torch.no_grad():
-                camera_random = MiniCam.get_test_cam()
-                sample = inference(self.diffusion_model, self.unet, self.device)
+                camera_random = MiniCam.get_cam(distance=1.4, theta=3.14 / 4, phi=3.14 / 4)
+                sample = inference(self.diffusion_model, self.unet, self.device, labels[0], skeletons[0])
                 sample = sample.permute(0, 2, 3, 4, 1).reshape(1, -1, 32)
                 with torch.amp.autocast('cuda', enabled=False):
                     image = self.decoder.render(camera_random, sample[0])[0]
@@ -114,12 +116,34 @@ class ModelWrapper(LightningModule):
 
     def get_features_batch(self, batch: TrainDataGaussianType):
         feature_list = []
-        for i in range(len(batch.features)):
+        for i in range(len(batch.anchor_feature)):
             feature_list.append(
-                batch.features[i].reshape(32, 32, 32, 32).permute(3, 0, 1, 2)
+                batch.anchor_feature[i].reshape(32, 32, 32, 32).permute(3, 0, 1, 2)
             )
         features = torch.stack(feature_list, dim=0)
         return features
+
+    def get_labels_batch(self, batch: TrainDataGaussianType):
+        label_list = []
+        if batch.label_feature is None:
+            return None
+        for i in range(len(batch.label_feature)):
+            label_list.append(
+                batch.label_feature[i].squeeze(0)
+            )
+        labels = torch.stack(label_list, dim=0)
+        return labels
+
+    def get_skeleton_batch(self, batch: TrainDataGaussianType):
+        skeleton_list = []
+        if batch.skeleton_points is None:
+            return None
+        for i in range(len(batch.skeleton_points)):
+            skeleton_list.append(
+                batch.skeleton_points[i].squeeze(0)
+            )
+        skeleton_list = torch.stack(skeleton_list, dim=0)
+        return skeleton_list
 
     def record_diffusion_logs(self, log_vars: Dict[str, Any]):
         self.log("loss_ddpm_mse", log_vars["loss_ddpm_mse"])

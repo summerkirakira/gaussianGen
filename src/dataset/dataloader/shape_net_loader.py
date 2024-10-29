@@ -41,7 +41,11 @@ class PLYPointCloudDataset(Dataset):
 
         uuid = file_path.stem
 
-        triplane_feature = torch.load(file_dir / f"{uuid}.feat.pth", weights_only=True, map_location='cpu')
+        feature = torch.load(file_dir / f"{uuid}.feat.pth", weights_only=True, map_location='cpu')
+
+        anchor_feature = feature['anchor_feat']
+        label_feature = feature['clip_feat']
+        skeleton_points = feature['skeleton_points']
 
         plydata = PlyData.read(file_path)
         max_sh_degree = 3
@@ -85,7 +89,9 @@ class PLYPointCloudDataset(Dataset):
             'scale': torch.tensor(scales, dtype=torch.float),
             'rot': torch.tensor(rots, dtype=torch.float),
             'name': file_path.stem,
-            'features': triplane_feature
+            'anchor_feature': anchor_feature,
+            'label_feature': label_feature,
+            'skeleton_points': skeleton_points
         }
 
         if self.transform:
@@ -118,7 +124,9 @@ def custom_collate_fn(batch) -> TrainDataGaussianType:
     data = {
         'gaussian_model': gaussian_model,
         # 'labels': [None for _ in batch],
-        'features': [sample['features'] for sample in batch]
+        'anchor_feature': [sample['anchor_feature'] for sample in batch],
+        'label_feature': [sample['label_feature'] for sample in batch],
+        'skeleton_points': [sample['skeleton_points'] for sample in batch]
     }
 
     return TrainDataGaussianType(**data)

@@ -2,9 +2,9 @@ defaults:
   - dataset: chair
 
 wandb:
-    project: neo_gaussian_gen_chair_test
+    project: gaussian_gen_chair_conditional
     entity: summerkirakira
-    name: Test
+    name: "4090-home"
     version: 0.1.3
     disabled: false
 
@@ -12,6 +12,9 @@ model:
   diffusion:
     use_kl: false
     min_snr: true
+
+  unet:
+    unconditional_gen: false
 
   diffusion_loss_weight: 1
   l1_loss_weight: 1
@@ -26,6 +29,6 @@ trainer:
   max_steps: 300000
   learning_rate: 1e-4
 
-load_from_checkpoint: /home/summerkirakira/Documents/Code/gaussianGen/outputs/chair/last.ckpt
-is_inference: true
+#load_from_checkpoint: /home/summerkirakira/Documents/Code/gaussianGen/outputs/chair/last.ckpt
+is_inference: false
 

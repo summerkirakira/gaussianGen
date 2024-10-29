@@ -1,5 +1,5 @@
 name: chair
-batch_size: 36
+batch_size: 14
 num_workers: 0
-path: /mnt/iusers01/eee01/d56517hz/Code/gaussianGen/data/shapenet/chair
+path: /home/summerkirakira/Documents/Code/gaussianGen/data/shapenet/chair_1
 type: shapenet

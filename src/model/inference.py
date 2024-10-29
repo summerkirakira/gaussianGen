@@ -5,7 +5,7 @@ from src.model.diffusions.unet import UNetModel
 from src.model.diffusions.gaussian_diffusion import GaussianDiffusion
 
 
-def inference(diffusion: GaussianDiffusion, model: UNetModel, device):
+def inference(diffusion: GaussianDiffusion, model: UNetModel, device, label=None, skeleton_points=None):
     noise_schedule = NoiseScheduleVP(schedule='discrete', betas=torch.from_numpy(diffusion.betas).to(device))
 
     model_fn = mw(
@@ -14,9 +14,7 @@ def inference(diffusion: GaussianDiffusion, model: UNetModel, device):
         model_type='x_start',
         model_kwargs={},
         guidance_type='uncond',
-        guidance_scale=1.0,
-        condition=None,
-        unconditional_condition=None,
+        guidance_scale=1.0
     )
     dpm_solver = DPM_Solver(model_fn, noise_schedule, algorithm_type='dpmsolver++')
 

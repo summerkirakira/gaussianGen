@@ -178,6 +178,8 @@ def model_wrapper(
     guidance_scale=1.,
     classifier_fn=None,
     classifier_kwargs={},
+    label=None,
+    skeleton_points=None
 ):
     """Create a wrapper function for the noise prediction model.
 
@@ -279,13 +281,13 @@ def model_wrapper(
         else:
             return t_continuous
 
-    def noise_pred_fn(x, t_continuous, cond=None):
+    def noise_pred_fn(x, t_continuous):
         t_input = get_model_input_time(t_continuous)
         C_in = x.shape[1]
-        if cond is None:
-            output = model(x, t_input, **model_kwargs)
+        if guidance_type == "uncond":
+            output = model(x, t_input)
         else:
-            output = model(x, t_input, **cond, **model_kwargs)
+            output = model(x, t_input, label, skeleton_points)
         if output.shape[1] != C_in:
             output, model_var_values = torch.split(output, C_in, dim=1)
         if model_type == "noise":
@@ -309,11 +311,13 @@ def model_wrapper(
             log_prob = classifier_fn(x_in, t_input, condition, **classifier_kwargs)
             return torch.autograd.grad(log_prob.sum(), x_in)[0]
 
-    def model_fn(x, t_continuous):
+    def model_fn(x, t_continuous, label=None, skeleton_points=None):
         """
         The noise predicition model function that is used for DPM-Solver.
         """
         if guidance_type == "uncond":
+            return noise_pred_fn(x, t_continuous)
+        elif guidance_type == "cond":
             return noise_pred_fn(x, t_continuous)
         elif guidance_type == "classifier":
             assert classifier_fn is not None
@@ -342,7 +346,7 @@ def model_wrapper(
                 return noise_uncond + guidance_scale * (noise - noise_uncond)
 
     assert model_type in ["noise", "x_start", "v", "score"]
-    assert guidance_type in ["uncond", "classifier", "classifier-free"]
+    assert guidance_type in ["uncond", "classifier", "classifier-free", "cond"]
     return model_fn
 
 

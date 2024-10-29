@@ -778,7 +778,7 @@ class GaussianDiffusion:
         output = torch.where((t == 0), decoder_nll, kl)
         return {'output': output, 'pred_xstart': out['pred_xstart']}
 
-    def training_losses(self, model, x_start, t, model_kwargs=None, noise=None):
+    def training_losses(self, model, x_start, t, model_kwargs=None, noise=None, label=None, skeleton_points=None):
         """
         Compute training losses for a single timestep.
         :param model: the model to evaluate loss on.
@@ -821,7 +821,7 @@ class GaussianDiffusion:
                 terms['loss'] *= self.num_timesteps
 
         elif self.loss_type == LossType.MSE or self.loss_type == LossType.RESCALED_MSE:
-            model_output = model(x_t, self._scale_timesteps(t), **model_kwargs)
+            model_output = model(x_t, self._scale_timesteps(t), **model_kwargs, label=label, skeleton_points=skeleton_points)
 
             if self.model_var_type in [
                 ModelVarType.LEARNED,

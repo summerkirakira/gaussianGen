@@ -7,6 +7,8 @@ import torch
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
+from ..architecture.point_net import SkeletonPointNetEncoder
+import random
 
 from .nn import avg_pool_nd, conv_nd, linear, normalization, timestep_embedding, zero_module, get_activation, \
     AttentionPooling
@@ -376,6 +378,12 @@ class UNetModel(nn.Module):
             num_heads=1,
             num_head_channels=-1,
             num_heads_upsample=-1,
+
+            num_skeleton_points=20,
+            num_label_dim=512,
+            label_dropout=0.1,
+            geometry_dropout=0.1,
+
             use_scale_shift_norm=False,
             resblock_updown=False,
             efficient_activation=False,
@@ -396,6 +404,11 @@ class UNetModel(nn.Module):
         self.out_channels = out_channels
         self.dropout = dropout
         self.unconditional_gen = unconditional_gen
+
+        self.num_skeleton_points = num_skeleton_points
+        self.num_label_dim = num_label_dim
+        self.label_dropout = label_dropout
+        self.geometry_dropout = geometry_dropout
 
         # adapt attention resolutions
         if isinstance(attention_resolutions, str):
@@ -449,9 +462,6 @@ class UNetModel(nn.Module):
             get_activation(activation),
             linear(self.time_embed_dim, self.time_embed_dim, dtype=self.dtype),
         )
-
-        if self.num_classes is not None:
-            self.label_emb = nn.Embedding(num_classes+1, self.time_embed_dim)
 
         ch = input_ch = int(self.channel_mult[0] * model_channels)
         self.input_blocks = nn.ModuleList(
@@ -617,35 +627,52 @@ class UNetModel(nn.Module):
 
         self.activation_layer = get_activation(activation) if self.efficient_activation else nn.Identity()
 
-        if not self.unconditional_gen and num_classes is None:
-            self.encoder_pooling = nn.Sequential(
-                nn.LayerNorm(encoder_dim, dtype=self.dtype),
-                AttentionPooling(att_pool_heads, encoder_dim, dtype=self.dtype),
-                nn.Linear(encoder_dim, self.time_embed_dim, dtype=self.dtype),
-                nn.LayerNorm(self.time_embed_dim, dtype=self.dtype)
-            )
-            if encoder_dim != encoder_channels:
-                self.encoder_proj = nn.Linear(encoder_dim, encoder_channels, dtype=self.dtype)
+        if not self.unconditional_gen:
+            # self.encoder_pooling = nn.Sequential(
+            #     nn.LayerNorm(encoder_dim, dtype=self.dtype),
+            #     AttentionPooling(att_pool_heads, encoder_dim, dtype=self.dtype),
+            #     nn.Linear(encoder_dim, self.time_embed_dim, dtype=self.dtype),
+            #     nn.LayerNorm(self.time_embed_dim, dtype=self.dtype)
+            # )
+            # if encoder_dim != encoder_channels:
+            #     self.encoder_proj = nn.Linear(encoder_dim, encoder_channels, dtype=self.dtype)
+            # else:
+            #     self.encoder_proj = nn.Identity()
+            self.skeleton_proj = SkeletonPointNetEncoder(output_dim=self.time_embed_dim, dtype=self.dtype)
+
+            if num_label_dim != self.model_channels:
+                self.label_proj = nn.Linear(num_label_dim, self.time_embed_dim, dtype=self.dtype)
             else:
-                self.encoder_proj = nn.Identity()
+                self.label_proj = nn.Identity()
 
         self.cache = None
 
-    def forward(self, x, timesteps, cond_text=None, class_labels=None, aug_emb=None, use_cache=False, **kwargs):
+    def forward(self, x, timesteps, label=None, skeleton_points=None, use_cache=False, **kwargs):
         hs = []
         input_type = x.dtype
         emb = self.time_embed(timestep_embedding(timesteps, self.model_channels, dtype=self.dtype))
 
         encoder_out = None
-        if cond_text is not None:
-            cond_text = cond_text.type(self.dtype)
-            encoder_out = self.encoder_proj(cond_text)
-            encoder_out = encoder_out.permute(0, 2, 1)  # NLC -> NCL
-            encoder_pool = self.encoder_pooling(cond_text)
-            emb = emb + encoder_pool.to(emb)
-        elif class_labels is not None:
-            label_emb = self.label_emb(class_labels)
-            emb = emb + label_emb.to(emb)
+        # if cond_text is not None:
+        #     cond_text = cond_text.type(self.dtype)
+        #     encoder_out = self.encoder_proj(cond_text)
+        #     encoder_out = encoder_out.permute(0, 2, 1)  # NLC -> NCL
+        #     encoder_pool = self.encoder_pooling(cond_text)
+        #     emb = emb + encoder_pool.to(emb)
+        # elif class_labels is not None:
+        #     label_emb = self.label_emb(class_labels)
+        #     emb = emb + label_emb.to(emb)
+
+        if not self.unconditional_gen:
+            if label is not None:
+                if random.random() > self.label_dropout:
+                    label = self.label_proj(label)
+                    emb = emb + label.to(emb)
+            if skeleton_points is not None:
+                if random.random() > self.geometry_dropout:
+                    skeleton_points = self.skeleton_proj(skeleton_points)
+                    emb = emb + skeleton_points.to(emb)
+
 
         emb = self.activation_layer(emb)
 
