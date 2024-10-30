@@ -34,6 +34,7 @@ class BaseConfig(BaseModel):
         max_steps: int = 300000
         gradient_clip_val: Optional[float] = None
         learning_rate: float = 1e-4
+        log_images_every_n_steps: int = 500
 
     class Model(BaseModel):
         diffusion: DiffusionConfig = DiffusionConfig()

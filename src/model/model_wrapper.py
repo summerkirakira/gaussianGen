@@ -96,7 +96,7 @@ class ModelWrapper(LightningModule):
         self.log("loss_lpips", loss_lpips)
         self.log("loss", loss)
 
-        if self.global_step % 300 == 0 and self.global_step != 0:
+        if self.global_step % self.cfg.trainer.log_images_every_n_steps == 0 and self.global_step != 0:
             self.log_image(pred_images[0], original_images[0], "image")
             with torch.no_grad():
                 camera_test = MiniCam.get_cam(distance=1.4, theta=3.14 / 4, phi=3.14 / 4)
