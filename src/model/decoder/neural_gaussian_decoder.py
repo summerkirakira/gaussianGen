@@ -222,7 +222,7 @@ class NeuralGaussianDecoder(LightningModule):
 
         return xyz, color, opacity, scaling, rot, neural_opacity, mask
 
-    def render(self, viewpoint_camera, features, white_background=False) -> Tuple[torch.Tensor, torch.Tensor]:
+    def render(self, viewpoint_camera, features, white_background=True) -> Tuple[torch.Tensor, torch.Tensor]:
         xyz, color, opacity, scaling, rot, neural_opacity, mask = self.get_gaussian_properties(viewpoint_camera, features)
         rendered_image, radii = self._render_gs(viewpoint_camera, xyz, color, opacity, scaling, rot, neural_opacity, mask, white_background)
         return rendered_image, radii

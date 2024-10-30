@@ -39,7 +39,7 @@ def render_gs_cuda(
         xyz
     )
 
-    bg_color = torch.Tensor([0., 0., 0.]).cuda()
+    bg_color = torch.Tensor([1., 1., 1.]).cuda()
 
     return _render(viewpoint_camera=camera, pc=gaussian_model, bg_color=bg_color, override_color=color_precomp)
 
