@@ -168,3 +168,5 @@ preprocess/
 test.py
 decoder_model/
 test_output.mp4
+test_output/
+test_output.zip

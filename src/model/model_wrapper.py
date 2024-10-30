@@ -99,11 +99,11 @@ class ModelWrapper(LightningModule):
         if self.global_step % 300 == 0 and self.global_step != 0:
             self.log_image(pred_images[0], original_images[0], "image")
             with torch.no_grad():
-                camera_random = MiniCam.get_cam(distance=1.4, theta=3.14 / 4, phi=3.14 / 4)
+                camera_test = MiniCam.get_cam(distance=1.4, theta=3.14 / 4, phi=3.14 / 4)
                 sample = inference(self.diffusion_model, self.unet, self.device, labels[0], skeletons[0])
                 sample = sample.permute(0, 2, 3, 4, 1).reshape(1, -1, 32)
                 with torch.amp.autocast('cuda', enabled=False):
-                    image = self.decoder.render(camera_random, sample[0])[0]
+                    image = self.decoder.render(camera_test, sample[0])[0]
                 self.log_single_image(image, 'Inference')
 
         return loss
@@ -198,7 +198,7 @@ class ModelWrapper(LightningModule):
         optimizer = torch.optim.Adam(lr=self.cfg.trainer.learning_rate, params=self.model_parameters)
         return optimizer
 
-    def inference_unconditioned(self, cameras: list[MiniCam]) -> list[Image]:
+    def inference_unconditioned(self, cameras: list[MiniCam], white_background=False) -> list[Image]:
         images: list[Image] = []
         with torch.no_grad():
             sample = inference(self.diffusion_model, self.unet, self.device)
@@ -206,7 +206,25 @@ class ModelWrapper(LightningModule):
             # xyz, color, opacity, scaling, rot, neural_opacity, mask = self.decoder.get_gaussian_properties(cameras[0], sample[0])
             for camera in cameras:
                 with torch.amp.autocast('cuda', enabled=False):
-                    image = self.decoder.render(camera, sample[0])[0]
+                    image = self.decoder.render(camera, sample[0], white_background)[0]
+                    # image, _ = self.decoder._render_gs(camera, xyz, color, opacity, scaling, rot, neural_opacity, mask)
+                image = torch.clamp(image, 0, 1)
+
+                image = image.permute(1, 2, 0).cpu().numpy()
+                image = (image * 255).astype('uint8')
+                image = Image.fromarray(image)
+                images.append(image)
+        return images
+
+    def inference_conditioned(self, cameras: list[MiniCam], label: Optional[Tensor], skeleton_points: Optional[Tensor]=None, white_background=False) -> list[Image]:
+        images: list[Image] = []
+        with torch.no_grad():
+            sample = inference(self.diffusion_model, self.unet, self.device, label=label, skeleton_points=skeleton_points)
+            sample = sample.permute(0, 2, 3, 4, 1).reshape(1, -1, 32)
+            # xyz, color, opacity, scaling, rot, neural_opacity, mask = self.decoder.get_gaussian_properties(cameras[0], sample[0])
+            for camera in cameras:
+                with torch.amp.autocast('cuda', enabled=False):
+                    image = self.decoder.render(camera, sample[0], white_background)[0]
                     # image, _ = self.decoder._render_gs(camera, xyz, color, opacity, scaling, rot, neural_opacity, mask)
                 image = torch.clamp(image, 0, 1)
 

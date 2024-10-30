@@ -41,13 +41,23 @@ def inference(config: BaseConfig):
         )
         cameras.append(camera)
 
-    images = model_wrapper.inference_unconditioned(cameras)
+    white_bg = config.inference.background_color == "white"
 
-    with VideoCreator('test_output.mp4', fps=60) as creator:
-        success = creator.create_video(
-            pil_images=images,
-            progress_bar=True
-        )
+    for i in range(5):
+        if not config.inference.conditional_generation:
+            images = model_wrapper.inference_unconditioned(cameras, white_bg)
+        else:
+            import clip
+            model, preprocess = clip.load("ViT-B/32", device="cuda")
+            text_input = clip.tokenize(config.inference.condition.label_text).cuda()
+            text_features = model.encode_text(text_input).float()
+            images = model_wrapper.inference_conditioned(cameras, label=text_features)
+
+        with VideoCreator(f'test_output/test_output_{i}.mp4', fps=60) as creator:
+            success = creator.create_video(
+                pil_images=images,
+                progress_bar=True
+            )
 
 
 @hydra.main(config_path="../config", config_name="main", version_base=None)
@@ -93,7 +103,6 @@ def train(config):
         enable_progress_bar=True,
         gradient_clip_val=config.trainer.gradient_clip_val,
         max_steps=config.trainer.max_steps,
-        # plugins=[SLURMEnvironment(auto_requeue=False)],
         log_every_n_steps=1,
         precision='16-mixed',
         strategy='ddp_find_unused_parameters_true'

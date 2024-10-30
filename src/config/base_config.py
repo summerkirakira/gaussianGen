@@ -56,6 +56,7 @@ class BaseConfig(BaseModel):
 
     seed: int = 114514
     mode: Literal["train", "test"] = "train"
+    use_fp16: bool = False
 
     @classmethod
     def load_config(cls, conf: dict):

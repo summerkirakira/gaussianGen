@@ -13,10 +13,12 @@ def inference(diffusion: GaussianDiffusion, model: UNetModel, device, label=None
         noise_schedule,
         model_type='x_start',
         model_kwargs={},
-        guidance_type='uncond',
-        guidance_scale=1.0
+        guidance_type='uncond' if (label is None and skeleton_points is None) else 'cond',
+        guidance_scale=1.0,
+        label=label,
+        skeleton_points=skeleton_points,
     )
-    dpm_solver = DPM_Solver(model_fn, noise_schedule, algorithm_type='dpmsolver++')
+    dpm_solver = DPM_Solver(model_fn, noise_schedule=noise_schedule, algorithm_type='dpmsolver++')
 
     sample_shape = (1, 32, 32, 32, 32)
 

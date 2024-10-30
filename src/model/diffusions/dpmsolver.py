@@ -360,6 +360,7 @@ class DPM_Solver:
         correcting_xt_fn=None,
         thresholding_max_val=1.,
         dynamic_thresholding_ratio=0.995,
+        step_callback=None
     ):
         """Construct a DPM-Solver. 
 
