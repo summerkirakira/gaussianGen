@@ -245,7 +245,7 @@ class ModelWrapper(LightningModule):
     def inference_unconditioned(self, cameras: list[MiniCam], white_background=False) -> list[Image]:
         images: list[Image] = []
         with torch.no_grad():
-            sample = inference(self.diffusion_model, self.unet, self.device, self.cfg.inference)
+            sample = inference(self.diffusion_model, self.unet, self.device, config=self.cfg.inference)
             sample = sample.permute(0, 2, 3, 4, 1).reshape(1, -1, 32)
             # xyz, color, opacity, scaling, rot, neural_opacity, mask = self.decoder.get_gaussian_properties(cameras[0], sample[0])
             for camera in cameras:
