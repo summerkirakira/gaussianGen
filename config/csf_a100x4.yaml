@@ -17,7 +17,7 @@ model:
     unconditional_gen: false
     precision: '32'
 
-  diffusion_loss_weight: 1
+  diffusion_loss_weight: 0.6
   l1_loss_weight: 1
   lpips_loss_weight: 1
 
