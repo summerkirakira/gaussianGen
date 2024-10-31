@@ -37,6 +37,8 @@ inference:
   show_steps: true
   background_color: "white"
   inference_steps: 1000
+  image_width: 800
+  image_height: 800
 
   condition:
     label_text: A yellow desk chair
