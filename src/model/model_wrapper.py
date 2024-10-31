@@ -146,7 +146,8 @@ class ModelWrapper(LightningModule):
             with VideoCreator(video_path, fps=self.cfg.inference.video.frame_rate) as creator:
                 success = creator.create_video(
                     pil_images=images,
-                    progress_bar=True
+                    progress_bar=True,
+                    codec="X264"
                 )
                 if not success:
                     print("Failed to create video")
