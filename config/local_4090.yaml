@@ -34,12 +34,12 @@ inference:
   conditional_generation: true
   show_steps: true
   background_color: "white"
-  inference_steps: 4000
+  inference_steps: 1000
 
   condition:
     label_text: A yellow desk chair
 
 load_from_checkpoint: /home/summerkirakira/Documents/Code/gaussianGen/outputs/last.ckpt
-is_inference: true
+is_inference: false
 use_fp16: false
 

@@ -144,6 +144,7 @@ class ModelWrapper(LightningModule):
 
             images_np = [np.array(image) for image in images]
             stacked_images = np.stack(images_np, axis=0)
+            stacked_images = stacked_images.transpose(0, 3, 1, 2)
 
             wandb.log({"Rendered Video": wandb.Video(stacked_images, fps=self.cfg.inference.video.frame_rate, format="mp4")})
 
