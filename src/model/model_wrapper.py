@@ -109,7 +109,7 @@ class ModelWrapper(LightningModule):
                 with torch.amp.autocast('cuda', enabled=False):
                     image = self.decoder.render(camera_test, sample[0])[0]
                 self.log_single_image(image, 'Inference')
-        elif self.global_step % self.cfg.trainer.log_videos_every_n_steps == 0:
+        if self.global_step % self.cfg.trainer.log_videos_every_n_steps == 0:
             self.render_video()
         return loss
 

@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import Optional
 
 
 class InferenceConfig(BaseModel):
@@ -13,9 +14,9 @@ class InferenceConfig(BaseModel):
     background_color: str = "white"
     inference_steps: int = 1000
 
-
     class Condition(BaseModel):
         label_text: str = "A yellow chair"
+        input_image_path: Optional[str] = None
 
     class Video(BaseModel):
         frame_rate: int = 30

@@ -14,6 +14,7 @@ from .dataset.data_module import DataModule
 from .model.model_wrapper import ModelWrapper
 from .model.decoder_legacy.gaussian_splatting.utils.camera_model import MiniCam
 from .misc.render_utils import VideoCreator
+from PIL import Image
 
 
 def inference(config: BaseConfig):
@@ -49,9 +50,15 @@ def inference(config: BaseConfig):
         else:
             import clip
             model, preprocess = clip.load("ViT-B/32", device="cuda")
-            text_input = clip.tokenize(config.inference.condition.label_text).cuda()
-            text_features = model.encode_text(text_input).float()
-            images = model_wrapper.inference_conditioned(cameras, label=text_features, white_background=white_bg)
+
+            if config.inference.condition.input_image_path is not None:
+                image = Image.open(config.inference.condition.input_image_path)
+                image = preprocess(image).unsqueeze(0).to("cuda")
+                query = model.encode_image(image).float()
+            else:
+                text_query = clip.tokenize(config.inference.condition.label_text).cuda()
+                query = model.encode_text(text_query).float()
+            images = model_wrapper.inference_conditioned(cameras, label=query, white_background=white_bg)
 
         with VideoCreator(f'test_output/test_output_{i}.mp4', fps=config.inference.video.frame_rate) as creator:
             success = creator.create_video(

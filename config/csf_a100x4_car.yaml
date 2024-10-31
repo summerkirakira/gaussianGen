@@ -1,0 +1,50 @@
+defaults:
+  - dataset: car
+
+wandb:
+    project: neo_gaussian_gen_car_csf
+    entity: summerkirakira
+    name: CSF-A100x4
+    version: 0.1.3
+    disabled: false
+
+model:
+  diffusion:
+    use_kl: false
+    min_snr: true
+
+  unet:
+    unconditional_gen: false
+    precision: '32'
+
+  diffusion_loss_weight: 0.6
+  l1_loss_weight: 1
+  lpips_loss_weight: 1
+
+checkpointing:
+  every_n_train_steps: 500
+  save_top_k: 0
+  path: outputs/chair/checkpoints
+
+trainer:
+  max_steps: 300000
+  learning_rate: 1e-4
+  log_images_every_n_steps: 300
+  log_videos_every_n_steps: 1000
+
+inference:
+  conditional_generation: false
+  show_steps: true
+  background_color: "white"
+  inference_steps: 1000
+  image_width: 800
+  image_height: 800
+
+  condition:
+    label_text: A yellow car
+
+output_path: outputs/chair
+load_from_checkpoint: /mnt/iusers01/eee01/d56517hz/Code/gaussianGen/outputs/car/checkpoints/last.ckpt
+# load_from_checkpoint: null
+is_inference: false
+
