@@ -24,6 +24,7 @@ from lpips import LPIPS
 from pytorch_lightning.utilities import rank_zero_only
 from ..misc.render_utils import VideoCreator
 import wandb
+import numpy as np
 
 
 class ModelWrapper(LightningModule):
@@ -141,18 +142,10 @@ class ModelWrapper(LightningModule):
                 text_features = model.encode_text(text_input).float()
                 images = self.inference_conditioned(cameras, label=text_features, white_background=white_bg)
 
-            video_path = str((Path(self.cfg.output_path) / "output_video.mp4").absolute())
+            images_np = [np.array(image) for image in images]
+            stacked_images = np.stack(images_np, axis=0)
 
-            with VideoCreator(video_path, fps=self.cfg.inference.video.frame_rate) as creator:
-                success = creator.create_video(
-                    pil_images=images,
-                    progress_bar=True,
-                    codec="X264"
-                )
-                if not success:
-                    print("Failed to create video")
-                else:
-                    wandb.log({"Rendered Video": wandb.Video(video_path, fps=self.cfg.inference.video.frame_rate, format="mp4")})
+            wandb.log({"Rendered Video": wandb.Video(stacked_images, fps=self.cfg.inference.video.frame_rate, format="mp4")})
 
     def get_predicted_image(self, features: Tensor, camera_gts: list[MiniCam]) -> Tensor:
         pred_images = []
