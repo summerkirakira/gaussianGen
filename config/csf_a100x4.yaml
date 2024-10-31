@@ -30,12 +30,13 @@ trainer:
   max_steps: 300000
   learning_rate: 1e-4
   log_images_every_n_steps: 300
+  log_videos_every_n_steps: 1000
 
 inference:
   conditional_generation: true
   show_steps: true
   background_color: "white"
-  inference_steps: 2000
+  inference_steps: 1000
 
   condition:
     label_text: A yellow desk chair

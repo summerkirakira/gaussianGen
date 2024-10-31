@@ -22,6 +22,8 @@ from pathlib import Path
 from .inference import inference
 from lpips import LPIPS
 from pytorch_lightning.utilities import rank_zero_only
+from ..misc.render_utils import VideoCreator
+import wandb
 
 
 class ModelWrapper(LightningModule):
@@ -101,13 +103,54 @@ class ModelWrapper(LightningModule):
             self.log_image(pred_images[0], original_images[0], "image")
             with torch.no_grad():
                 camera_test = MiniCam.get_cam(distance=1.4, theta=3.14 / 4, phi=3.14 / 4)
-                sample = inference(self.diffusion_model, self.unet, self.device)
+                sample = inference(self.diffusion_model, self.unet, self.device, config=self.cfg.inference)
                 sample = sample.permute(0, 2, 3, 4, 1).reshape(1, -1, 32)
                 with torch.amp.autocast('cuda', enabled=False):
                     image = self.decoder.render(camera_test, sample[0])[0]
                 self.log_single_image(image, 'Inference')
-
+        elif self.global_step % self.cfg.trainer.log_videos_every_n_steps == 0:
+            self.render_video()
         return loss
+
+    def render_video(self):
+        with torch.no_grad():
+            n_images = self.cfg.inference.n_images
+
+            theta_interval = 2 * 3.1416 / n_images
+            thetas = [theta_interval * i for i in range(n_images)]
+
+            cameras = []
+
+            for theta in thetas:
+                camera = MiniCam.get_cam(
+                    self.cfg.inference.image_width,
+                    self.cfg.inference.image_height,
+                    self.cfg.inference.distance,
+                    theta,
+                    self.cfg.inference.phi
+                )
+                cameras.append(camera)
+            white_bg = self.cfg.inference.background_color == "white"
+            if not self.cfg.inference.conditional_generation:
+                images = self.inference_unconditioned(cameras, white_bg)
+            else:
+                import clip
+                model, preprocess = clip.load("ViT-B/32", device="cuda")
+                text_input = clip.tokenize(self.cfg.inference.condition.label_text).cuda()
+                text_features = model.encode_text(text_input).float()
+                images = self.inference_conditioned(cameras, label=text_features, white_background=white_bg)
+
+            video_path = str((Path(self.cfg.output_path) / "output_video.mp4").absolute())
+
+            with VideoCreator(video_path, fps=self.cfg.inference.video.frame_rate) as creator:
+                success = creator.create_video(
+                    pil_images=images,
+                    progress_bar=True
+                )
+                if not success:
+                    print("Failed to create video")
+                else:
+                    wandb.log({"Rendered Video": wandb.Video(video_path, fps=self.cfg.inference.video.frame_rate, format="mp4")})
 
     def get_predicted_image(self, features: Tensor, camera_gts: list[MiniCam]) -> Tensor:
         pred_images = []
