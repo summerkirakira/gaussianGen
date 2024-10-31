@@ -43,7 +43,7 @@ def inference(config: BaseConfig):
 
     white_bg = config.inference.background_color == "white"
 
-    for i in range(5):
+    for i in range(10):
         if not config.inference.conditional_generation:
             images = model_wrapper.inference_unconditioned(cameras, white_bg)
         else:
@@ -51,7 +51,7 @@ def inference(config: BaseConfig):
             model, preprocess = clip.load("ViT-B/32", device="cuda")
             text_input = clip.tokenize(config.inference.condition.label_text).cuda()
             text_features = model.encode_text(text_input).float()
-            images = model_wrapper.inference_conditioned(cameras, label=text_features)
+            images = model_wrapper.inference_conditioned(cameras, label=text_features, white_background=white_bg)
 
         with VideoCreator(f'test_output/test_output_{i}.mp4', fps=60) as creator:
             success = creator.create_video(

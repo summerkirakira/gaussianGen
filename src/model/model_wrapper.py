@@ -100,7 +100,7 @@ class ModelWrapper(LightningModule):
             self.log_image(pred_images[0], original_images[0], "image")
             with torch.no_grad():
                 camera_test = MiniCam.get_cam(distance=1.4, theta=3.14 / 4, phi=3.14 / 4)
-                sample = inference(self.diffusion_model, self.unet, self.device, labels[0], skeletons[0].unsqueeze(0))
+                sample = inference(self.diffusion_model, self.unet, self.device)
                 sample = sample.permute(0, 2, 3, 4, 1).reshape(1, -1, 32)
                 with torch.amp.autocast('cuda', enabled=False):
                     image = self.decoder.render(camera_test, sample[0])[0]
