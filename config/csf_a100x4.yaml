@@ -23,7 +23,7 @@ model:
 
 checkpointing:
   every_n_train_steps: 500
-  save_top_k: 2
+  save_top_k: 0
   path: outputs/chair/checkpoints
 
 trainer:
@@ -44,7 +44,7 @@ inference:
     label_text: A yellow desk chair
 
 output_path: outputs/chair
-load_from_checkpoint: /mnt/iusers01/eee01/d56517hz/Code/gaussianGen/outputs/chair/checkpoints/last.ckpt
+load_from_checkpoint: /mnt/iusers01/eee01/d56517hz/Code/gaussianGen/outputs/chair/checkpoints/last-v1.ckpt
 # load_from_checkpoint: null
 is_inference: false
 
