@@ -35,7 +35,7 @@ inference:
   conditional_generation: true
   show_steps: true
   background_color: "white"
-  inference_steps: 4000
+  inference_steps: 2000
 
   condition:
     label_text: A yellow desk chair
