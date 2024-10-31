@@ -33,7 +33,7 @@ trainer:
   log_videos_every_n_steps: 1000
 
 inference:
-  conditional_generation: true
+  conditional_generation: false
   show_steps: true
   background_color: "white"
   inference_steps: 1000
