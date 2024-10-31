@@ -43,7 +43,7 @@ def inference(config: BaseConfig):
 
     white_bg = config.inference.background_color == "white"
 
-    for i in range(10):
+    for i in range(config.inference.video.n_videos):
         if not config.inference.conditional_generation:
             images = model_wrapper.inference_unconditioned(cameras, white_bg)
         else:
@@ -53,14 +53,19 @@ def inference(config: BaseConfig):
             text_features = model.encode_text(text_input).float()
             images = model_wrapper.inference_conditioned(cameras, label=text_features, white_background=white_bg)
 
-        with VideoCreator(f'test_output/test_output_{i}.mp4', fps=60) as creator:
+        with VideoCreator(f'test_output/test_output_{i}.mp4', fps=config.inference.video.frame_rate) as creator:
             success = creator.create_video(
                 pil_images=images,
                 progress_bar=True
             )
 
 
-@hydra.main(config_path="../config", config_name="main", version_base=None)
+import os
+
+CONFIG_NAME = os.getenv('CONFIG_NAME', 'local_4090')
+
+
+@hydra.main(config_path="../config", config_name=CONFIG_NAME, version_base=None)
 def train(config):
     config = BaseConfig.load_config(config)
 
@@ -114,7 +119,8 @@ def train(config):
 
     data_module = DataModule(config.dataset)
     if config.load_from_checkpoint:
-        model_wrapper = ModelWrapper.load_from_checkpoint(config.load_from_checkpoint, cfg=config, strict=False, map_location="cpu")
+        model_wrapper = ModelWrapper.load_from_checkpoint(config.load_from_checkpoint, cfg=config, strict=False,
+                                                          map_location="cpu")
     else:
         model_wrapper = ModelWrapper(
             config
@@ -127,4 +133,3 @@ def train(config):
 
 if __name__ == "__main__":
     train()
-

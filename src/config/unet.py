@@ -24,8 +24,8 @@ class UnetConfig(BaseModel):
     disable_self_attentions: bool = False
     unconditional_gen: bool = True
     precision: str = "32"
-    label_dropout = 0.2
-    geometry_dropout = 0.2
+    label_dropout: float = 0.2
+    geometry_dropout: float = 0.2
 
     class Config:
         extra = "forbid"
