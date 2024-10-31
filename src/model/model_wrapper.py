@@ -112,6 +112,7 @@ class ModelWrapper(LightningModule):
             self.render_video()
         return loss
 
+    @rank_zero_only
     def render_video(self):
         with torch.no_grad():
             n_images = self.cfg.inference.n_images
